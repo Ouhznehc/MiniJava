@@ -1,0 +1,43 @@
+### Maven Target###
+target/
+
+### Antlr ###
+src/*.tokens
+src/*.interp
+src/MiniJavaLexer.java
+src/MiniJavaParser.java
+src/MiniJavaParserBaseListener.java
+src/MiniJavaParserListener.java
+src/MiniJavaParserBaseVisitor.java
+src/MiniJavaParserVisitor.java
+
+
+
+### IntelliJ IDEA ###
+.idea/
+.idea/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
