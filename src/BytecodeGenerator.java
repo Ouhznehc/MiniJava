@@ -1,21 +1,24 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class BytecodeGenerator extends MiniJavaParserBaseVisitor<MiniJavaType>
-        implements MiniJavaParserVisitor<MiniJavaType> {
+public class BytecodeGenerator {
+    private final List<Triple> bytecodes;
 
-
-
-    @Override
-    public MiniJavaType visitCompilationUnit(MiniJavaParser.CompilationUnitContext ctx) {
-        return visitChildren(ctx);
+    public BytecodeGenerator() {
+        this.bytecodes = new ArrayList<>();
     }
 
-    @Override
-    public MiniJavaType visitBlock(MiniJavaParser.BlockContext ctx) {
-        // symbolTableStack.add(new HashMap<>());
-        var ret = visitChildren(ctx);
-        // displaySymbolTable();
-        // symbolTableStack.removeLast();
-        return ret;
+    public void emitBytecode(BytecodeType type, int arg1, int arg2) {
+        bytecodes.add(new Triple(type, arg1, arg2));
+    }
+
+    public List<Triple> getBytecodes() {
+        return bytecodes;
+    }
+
+    public void displayBytecodes() {
+        for (var bytecode : bytecodes) {
+            System.out.println(bytecode);
+        }
     }
 }

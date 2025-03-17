@@ -1,8 +1,8 @@
+import java.io.File;
+
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import java.io.File;
-import java.io.FileOutputStream;
 
 public class Main {
     public static void run(File sourceFile, File bytecodeFile) throws Exception {
@@ -12,15 +12,10 @@ public class Main {
         MiniJavaParser parser = new MiniJavaParser(tokenStream);
         ParseTree pt = parser.compilationUnit();
 
-        // Implement your own Visitor by extending MiniJavaParserBaseVisitor
-        // For example, BytecodeGenerator should generate bytecode and provide a getBytecode() method
-        BytecodeGenerator generator = new BytecodeGenerator();
-        generator.visit(pt);
-
-//        byte[] bytecode = generator.getBytecode();
-//        try (FileOutputStream fos = new FileOutputStream(bytecodeFile)) {
-//            fos.write(bytecode);
-//        }
+        TreeWalkVisitor visitor = new TreeWalkVisitor();
+        visitor.visit(pt);
+        
+        visitor.displayBytecodes();
     }
 
     public static void main(String[] args) throws Exception {

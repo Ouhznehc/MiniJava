@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 // this class stores the whole environment for bytecode
@@ -9,13 +8,9 @@ import java.util.Map;
 // Because IDENTIFIER must start with letter not digit,
 // this global name would not conflict with other function name.
 public class Environment {
-    public final Map<String, List<Map<String, MiniJavaType>>> environment;
+    public final Map<String, ArrayList<Map<String, MiniJavaType>>> environment;
 
     public Environment() {
         environment = new HashMap<>();
     }
-
-
-
-
 }

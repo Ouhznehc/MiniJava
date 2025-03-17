@@ -16,6 +16,11 @@ public enum MiniJavaType {
         this.priority = priority;
     }
 
+    @Override
+    public String toString() {
+        return name;
+    }
+
     public static final Comparator<MiniJavaType> PRIORITY_COMPARATOR =
             Comparator.comparingInt(pt -> pt.priority);
 
