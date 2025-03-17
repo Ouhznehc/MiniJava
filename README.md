@@ -1,4 +1,4 @@
-<h1 align="center"><img src=".github/minijava-logo.png" width="35%"/>
+<p align="center"><img src=".github/minijava-logo.png" width="35%"/> </p>
 
 
 <p align="center">
@@ -6,6 +6,7 @@
 	<a target="_blank" href="http://makeapullrequest.com" title="PRs Welcome"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
 	    <a title="GitHub Stars"><img src="https://img.shields.io/github/stars/ouhznehc/minijava?style=flat"></a>
 </p>
+
 
 MiniJava is a compact subset of Java that introduces both procedural and object-oriented programming concepts in a simplified form. It is designed for educational purposes in compiler construction and language processing courses, allowing you to explore key compilation phases—from lexical and syntax analysis to intermediate representation generation, code generation, and interpretation.
 
