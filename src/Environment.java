@@ -19,6 +19,16 @@ public class Environment {
         symbolTable = new HashMap<>();
         pools.put("0_global", new Pools());
         symbolTable.put("0_global", new ArrayList<>());
+        // The first three global object in constant pool are reserved for the following:
+        // 0: null object
+        // 1: true object
+        // 2: false object
+        var null_object = new MiniJavaObject(MiniJavaType.CONSTANT, null);
+        var true_object = new MiniJavaObject(MiniJavaType.CONSTANT, true);
+        var false_object = new MiniJavaObject(MiniJavaType.CONSTANT, false);
+        newConstant("0_global", null_object);
+        newConstant("0_global", true_object);
+        newConstant("0_global", false_object);
     }
     
     public MiniJavaObject newVariable(String scope, String name, MiniJavaObject object) {

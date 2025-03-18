@@ -1,7 +1,9 @@
 {
     int a = 1;
     {
-        int a = 2;
+        int b = 20;
+        int a = 2 + 4;
         a = 3;
+        a += b;
     }
 }

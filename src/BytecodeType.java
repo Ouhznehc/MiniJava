@@ -3,11 +3,6 @@ public enum BytecodeType {
     
     OP_FUNCTION("OP_FUNCTION"),
 
-    //TODO: To reduce bytecode, we can always use OP_CONSTANT to load the value to the stack
-    OP_NIL("OP_NIL"),
-    OP_TRUE("OP_TRUE"),
-    OP_FALSE("OP_FALSE"),
-
     OP_POP("OP_POP"),
 
     OP_GET_LOCAL("OP_GET_LOCAL"),
@@ -16,6 +11,13 @@ public enum BytecodeType {
     OP_GET_GLOBAL("OP_GET_GLOBAL"),
     OP_SET_GLOBAL("OP_SET_GLOBAL"),
     OP_DEFINE_GLOBAL("OP_DEFINE_GLOBAL"),
+
+    // Pop the top element, inc/dec and push back.
+    OP_PRE_INC("OP_PRE_INC"),
+    OP_PRE_DEC("OP_PRE_DEC"),
+    // Get but not pop the top element, inc/dec and push back.
+    OP_POST_INC("OP_POST_INC"),
+    OP_POST_DEC("OP_POST_DEC"),
 
     OP_ADD("OP_ADD"),
     OP_SUB("OP_SUB"),

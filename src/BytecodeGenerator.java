@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BytecodeGenerator {
-    private final List<Triple> bytecodes;
+    public final List<Triple> bytecodes;
 
     public BytecodeGenerator() {
         this.bytecodes = new ArrayList<>();
@@ -15,9 +15,6 @@ public class BytecodeGenerator {
         bytecodes.add(new Triple(type, arg1, arg2));
     }
 
-    public List<Triple> getBytecodes() {
-        return bytecodes;
-    }
 
     public void displayBytecodes(String filePath) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
