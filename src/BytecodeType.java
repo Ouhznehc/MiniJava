@@ -1,5 +1,7 @@
 public enum BytecodeType {
     OP_CONSTANT("OP_CONSTANT"),
+    
+    OP_FUNCTION("OP_FUNCTION"),
 
     //TODO: To reduce bytecode, we can always use OP_CONSTANT to load the value to the stack
     OP_NIL("OP_NIL"),

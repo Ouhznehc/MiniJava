@@ -3,11 +3,12 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public enum MiniJavaType {
-    STRING("string", 4),
-    INT("int", 3),
-    CHAR("char", 2),
-    BOOLEAN("boolean", 1),
-    NULL("null", 0);
+    STRING("string", 5),
+    INT("int", 4),
+    CHAR("char", 3),
+    BOOLEAN("boolean", 2),
+    NULL("null", 1),
+    CONSTANT("constant", 0);
 
     private final String name;
     private final int priority;
