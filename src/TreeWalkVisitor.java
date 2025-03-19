@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.Stack;
 
 public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
 
@@ -7,6 +8,9 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
 
     private String curScope = "0_global";
     private Integer curLabel = 0;
+
+    private Stack<Integer> breakStack = new Stack<>();
+    private Stack<Integer> continueStack = new Stack<>();
 
     private void getVariable(MiniJavaObject variable) {
         if (variable.isGlobal()) {
@@ -19,10 +23,8 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     private void setVariable(MiniJavaObject variable) {
         if (variable.isGlobal()) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_GLOBAL, variable.index, null);
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_POP, null, null);
         } else {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index, null);
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_POP, null, null);
         }
     }
     
@@ -64,8 +66,7 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
                 || ctx.bop.getType() == MiniJavaParser.LT
                 || ctx.bop.getType() == MiniJavaParser.LE
                 || ctx.bop.getType() == MiniJavaParser.GT
-                || ctx.bop.getType() == MiniJavaParser.GE
-                || ctx.bop.getType() == MiniJavaParser.QUESTION){
+                || ctx.bop.getType() == MiniJavaParser.GE){
                 return true;
             }
         }
@@ -104,6 +105,10 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
             || type == MiniJavaParser.BITAND
             || type == MiniJavaParser.BITOR
             || type == MiniJavaParser.CARET;
+    }
+
+    private boolean isQuestionExp(MiniJavaParser.ExpressionContext ctx) {
+        return ctx.bop != null && ctx.bop.getType() == MiniJavaParser.QUESTION;
     }
 
     private void newSymbolTable() {
@@ -162,14 +167,109 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     }
 
     private MiniJavaObject visitIfStatement(MiniJavaParser.StatementContext ctx) {
+        if (ctx.ELSE() == null) {
+            Integer true_label = curLabel++;
+            Integer end_label = curLabel++;
+            visitConditionExp(ctx.parExpression().expression(), true_label, end_label);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, true_label, null);
+            visit(ctx.statement(0));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, end_label, null);
+        } else {
+            Integer true_label = curLabel++;
+            Integer false_label = curLabel++;
+            Integer end_label = curLabel++;
+            visitConditionExp(ctx.parExpression().expression(), true_label, false_label);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, true_label, null);
+            visit(ctx.statement(0));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, end_label, null);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, false_label, null);
+            visit(ctx.statement(1));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, end_label, null);
+        }
         return null;
     }
 
     private MiniJavaObject visitWhileStatement(MiniJavaParser.StatementContext ctx) {
+        // while ( parExpression ) statement
+
+        // Generate labels for the loop:
+        Integer start_label = curLabel++;  // Loop condition check label
+        Integer true_label = curLabel++;   // Label for entering the loop body
+        Integer end_label = curLabel++;    // Label for loop exit
+
+        // Push the current loop's labels onto the stacks
+        breakStack.push(end_label);
+        continueStack.push(start_label);
+
+        // Emit label for the start of the loop (condition evaluation)
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, start_label, null);
+        // Evaluate the condition: if true, jump to true_label; if false, jump to end_label.
+        visitConditionExp(ctx.parExpression().expression(), true_label, end_label);
+        // Emit label for the loop body (true branch)
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, true_label, null);
+        // Process the loop body
+        visit(ctx.statement(0));
+        // After executing the body, jump back to the condition evaluation
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, start_label, null);
+        // Emit the loop exit label
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, end_label, null);
+
+        // Pop loop labels off the stacks
+        breakStack.pop();
+        continueStack.pop();
+
         return null;
     }
 
     private MiniJavaObject visitForStatement(MiniJavaParser.StatementContext ctx) {
+        // for ( forControl ) statement
+
+        newSymbolTable();
+
+        // Process initialization (if present)
+        var forInit = ctx.forControl().forInit();
+        if (forInit != null) visit(forInit);
+
+        // Generate labels:
+        Integer start_label = curLabel++;  // Condition check label (also used for continue)
+        Integer true_label = curLabel++;   // Label for entering loop body
+        Integer end_label = curLabel++;    // Exit label for break
+
+        // Push the loop labels
+        breakStack.push(end_label);
+        continueStack.push(start_label);
+
+        // Emit label for condition evaluation
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, start_label, null);
+
+        // Evaluate the loop condition if present; if not, always true
+        if (ctx.forControl().expression() != null) {
+            visitConditionExp(ctx.forControl().expression(), true_label, end_label);
+        } else {
+            // No condition means always jump to the body
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, true_label, null);
+        }
+
+        // Emit label for loop body
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, true_label, null);
+        // Process the loop body
+        visit(ctx.statement(0));
+
+        // Process update expression(s) if present (forUpdate is an expressionList)
+        if (ctx.forControl().forUpdate != null) {
+            visit(ctx.forControl().forUpdate);
+        }
+        // Jump back to condition check
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, start_label, null);
+        // Emit loop exit label
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, end_label, null);
+
+        // Pop the loop labels off the stacks
+        breakStack.pop();
+        continueStack.pop();
+
+        removeSymbolTable();
+
         return null;
     }
 
@@ -184,8 +284,16 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         } else if (ctx.WHILE() != null) {
             return visitWhileStatement(ctx);
         } else if (ctx.CONTINUE() != null) {
+            if (continueStack.isEmpty()) throw new RuntimeException("Continue statement not within a loop");
+            // Emit a jump to the current loop's continue target (condition check)
+            int continue_target = continueStack.peek();
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, continue_target, null);
             return null;
         } else if (ctx.BREAK() != null) {
+            if (breakStack.isEmpty()) throw new RuntimeException("Break statement not within a loop");
+            // Emit a jump to the current loop's break target (loop exit)
+            int break_target = breakStack.peek();
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, break_target, null);
             return null;
         } else if (ctx.expression() != null) {
             return visitChildren(ctx);
@@ -353,9 +461,54 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         }
     }
 
-    private MiniJavaObject visitConditionExp(MiniJavaParser.ExpressionContext ctx, Integer true_label, Integer false_label) {
-        //TODO: implement this
-        return null;
+
+
+    private void visitConditionExp(MiniJavaParser.ExpressionContext ctx, Integer true_label, Integer false_label) {
+        if (ctx.bop != null) {
+            if (ctx.bop.getType() == MiniJavaParser.AND) {
+                Integer label = curLabel++;
+                visitConditionExp(ctx.expression(0), label, false_label);
+                bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, label, null);
+                visitConditionExp(ctx.expression(1), true_label, false_label);
+            } else if (ctx.bop.getType() == MiniJavaParser.OR) {
+                Integer label = curLabel++;
+                visitConditionExp(ctx.expression(0), true_label, label);
+                bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, label, null);
+                visitConditionExp(ctx.expression(1), true_label, false_label);
+            } else {
+                // Exp -> Exp RELOP Exp
+                // First visit rhs, then lhs
+                visit(ctx.expression(1));
+                visit(ctx.expression(0));
+                switch (ctx.bop.getType()) {
+                    case MiniJavaParser.EQUAL:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_EQ, null, null);
+                        break;
+                    case MiniJavaParser.NOTEQUAL:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_NEQ, null, null);
+                        break;
+                    case MiniJavaParser.LT:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_LT, null, null);
+                        break;
+                    case MiniJavaParser.LE:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_LE, null, null);
+                        break;
+                    case MiniJavaParser.GT:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_GT, null, null);
+                        break;
+                    case MiniJavaParser.GE:
+                        bytecodeGenerator.emitBytecode(BytecodeType.OP_GE, null, null);
+                        break;
+                }
+                bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP_IF_TRUE, true_label, null);
+                bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, false_label, null);
+            }
+        } else if (ctx.prefix != null) {
+            // Exp -> !Exp
+            visitConditionExp(ctx.expression(0), false_label, true_label);
+        } else {
+            throw new RuntimeException("Unknown condition expression: " + ctx.getText());
+        }
     }
 
     @Override
@@ -363,9 +516,28 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         if (isConditionExp(ctx)) {
             Integer true_label = curLabel++;
             Integer false_label = curLabel++;
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_FALSE, null, null);
             visitConditionExp(ctx, true_label, false_label);
-            return null;
-        }else if (ctx.bop != null) {
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, true_label, null);
+            // Pop out the False value
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_POP, null, null);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_TRUE, null, null);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, false_label, null);
+            return new MiniJavaObject(MiniJavaType.BOOLEAN, null);
+        } else if (isQuestionExp(ctx)) {
+            Integer false_label = curLabel++;
+            Integer end_label = curLabel++;
+            visitExpression(ctx.expression(0));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP_IF_FALSE, false_label, null);
+             // True expression
+            var true_obj = visitExpression(ctx.expression(1));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_JUMP, end_label, null);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, false_label, null);
+            // False expression
+            var false_obj = visitExpression(ctx.expression(2));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, end_label, null);
+            return new MiniJavaObject(MiniJavaType.maxType(true_obj.type, false_obj.type), null);
+        } else if (ctx.bop != null) {
             return visitBopExp(ctx);
         } else if (ctx.primary() != null) {
             return visit(ctx.primary());

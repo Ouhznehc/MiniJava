@@ -1,5 +1,9 @@
 public enum BytecodeType {
     OP_CONSTANT("OP_CONSTANT"),
+
+    OP_NIL("OP_NIL"),
+    OP_TRUE("OP_TRUE"),
+    OP_FALSE("OP_FALSE"),
     
     OP_FUNCTION("OP_FUNCTION"),
 
@@ -12,7 +16,7 @@ public enum BytecodeType {
     OP_SET_GLOBAL("OP_SET_GLOBAL"),
     OP_DEFINE_GLOBAL("OP_DEFINE_GLOBAL"),
 
-    // Pop the top element, inc/dec and push back.
+    // Pop the top element, inc/dec and push back 2 value(the same).
     OP_PRE_INC("OP_PRE_INC"),
     OP_PRE_DEC("OP_PRE_DEC"),
     // Get but not pop the top element, inc/dec and push back.
@@ -42,6 +46,7 @@ public enum BytecodeType {
 
     OP_LABEL("OP_LABEL"),
     OP_JUMP("OP_JUMP"),
+    OP_JUMP_IF_TRUE("OP_JUMP_IF_TRUE"),
     OP_JUMP_IF_FALSE("OP_JUMP_IF_FALSE"),
 
     OP_CLASS("OP_CLASS"),

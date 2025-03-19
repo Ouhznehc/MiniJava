@@ -1,17 +1,11 @@
 ================= Scope: 0_global =================
 ------------- Constant Pool ------------
 Index Value     
-0     null      
-1     true      
-2     false     
-3     1         
-4     20        
-5     4         
-6     2         
-7     3         
+0     1         
+1     2         
+2     3         
 
 ------------- Variable Pool ------------
 Index Name       Type      
 0     a          int       
 1     b          int       
-2     a          int       
