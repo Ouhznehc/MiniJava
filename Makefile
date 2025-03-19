@@ -18,4 +18,8 @@ run: compile
 clean:
 	$(MVN) clean
 
-.PHONY: compile run clean
+# Count the number of lines of code in the project
+count:
+	scc .
+
+.PHONY: compile run clean count
