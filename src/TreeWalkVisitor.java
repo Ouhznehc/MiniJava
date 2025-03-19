@@ -3,8 +3,13 @@ import java.util.Stack;
 
 public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
 
-    private final Environment environment = new Environment();
-    private final BytecodeGenerator bytecodeGenerator = new BytecodeGenerator();
+    private final Environment environment;
+    private final BytecodeGenerator bytecodeGenerator;
+
+    public TreeWalkVisitor(BytecodeGenerator bytecodeGenerator, Environment environment) {
+        this.bytecodeGenerator = bytecodeGenerator;
+        this.environment = environment;
+    }
 
     private String curScope = "0_global";
     private Integer curLabel = 0;
@@ -117,14 +122,6 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
 
     private void removeSymbolTable() {
         environment.symbolTable.get(curScope).removeLast();
-    }
-
-    public void displayBytecodes(String filePath) {
-        bytecodeGenerator.displayBytecodes(filePath);
-    }
-
-    public void displayEnvironment(String filePath) {
-        environment.displayEnvironment(filePath);
     }
 
     @Override

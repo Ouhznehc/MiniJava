@@ -5,14 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BytecodeGenerator {
-    public final List<Triple> bytecodes;
+    public final List<Bytecode> bytecodes;
 
     public BytecodeGenerator() {
         this.bytecodes = new ArrayList<>();
     }
 
     public void emitBytecode(BytecodeType type, Integer arg1, Integer arg2) {
-        bytecodes.add(new Triple(type, arg1, arg2));
+        bytecodes.add(new Bytecode(type, arg1, arg2));
     }
 
 

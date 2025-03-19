@@ -8,6 +8,6 @@ Index Type       Value
 
 ------------- Variable Pool ------------
 Index Name       Type       Value     
-0     a          int        null      
-1     b          int        null      
-2     i          int        null      
+0     a          int        56        
+1     b          int        2         
+2     i          int        11        

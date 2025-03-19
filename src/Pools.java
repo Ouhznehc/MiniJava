@@ -15,19 +15,19 @@ public class Pools {
     public void displayPools(PrintWriter writer) {
         // Display Constant Pool
         writer.println("------------- Constant Pool ------------");
-        writer.printf("%-5s %-10s%n", "Index", "Value");
+        writer.printf("%-5s %-10s %-10s%n", "Index", "Type", "Value");
         for (int i = 0; i < constantPool.size(); i++) {
             var constant = constantPool.get(i);
-            writer.printf("%-5d %-10s%n", i, constant.value);
+            writer.printf("%-5s %-10s %-10s%n", i, constant.type, constant.value);
         }
         writer.println();
     
         // Display Variable Pool
         writer.println("------------- Variable Pool ------------");
-        writer.printf("%-5s %-10s %-10s%n", "Index", "Name", "Type");
+        writer.printf("%-5s %-10s %-10s %-10s%n", "Index", "Name", "Type", "Value");
         for (int i = 0; i < variablePool.size(); i++) {
             var variable = variablePool.get(i);
-            writer.printf("%-5d %-10s %-10s%n", i, variable.name, variable.type);
+            writer.printf("%-5d %-10s %-10s %-10s%n", i, variable.name, variable.type, variable.value);
         }
     }
 }

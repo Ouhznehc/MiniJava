@@ -14,7 +14,6 @@ public enum BytecodeType {
 
     OP_GET_GLOBAL("OP_GET_GLOBAL"),
     OP_SET_GLOBAL("OP_SET_GLOBAL"),
-    OP_DEFINE_GLOBAL("OP_DEFINE_GLOBAL"),
 
     // Pop the top element, inc/dec and push back 2 value(the same).
     OP_PRE_INC("OP_PRE_INC"),
@@ -35,7 +34,6 @@ public enum BytecodeType {
     OP_BIT_OR("OP_BIT_OR"),
     OP_BIT_XOR("OP_BIT_XOR"),
     OP_BIT_NOT("OP_BIT_NOT"),
-    OP_NOT("OP_NOT"),
     OP_NEG("OP_NEG"),
     OP_EQ("OP_EQ"),
     OP_NEQ("OP_NEQ"),

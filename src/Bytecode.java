@@ -1,9 +1,9 @@
-public class Triple {
+public class Bytecode {
     public BytecodeType type;
     public Integer arg1;
     public Integer arg2;
 
-    public Triple(BytecodeType type, Integer arg1, Integer arg2) {
+    public Bytecode(BytecodeType type, Integer arg1, Integer arg2) {
         this.type = type;
         this.arg1 = arg1;
         this.arg2 = arg2;

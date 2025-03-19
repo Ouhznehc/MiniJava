@@ -5,29 +5,29 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 public class Main {
-    public static void run(File sourceFile) throws Exception {
-        var input = CharStreams.fromFileName(sourceFile.getAbsolutePath());
+    public static void run(String sourcePath) throws Exception {
+        var input = CharStreams.fromFileName(sourcePath);
         MiniJavaLexer lexer = new MiniJavaLexer(input);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer);
         MiniJavaParser parser = new MiniJavaParser(tokenStream);
         ParseTree pt = parser.compilationUnit();
 
-        TreeWalkVisitor visitor = new TreeWalkVisitor();
+        String bytecodePath = sourcePath.substring(0, sourcePath.length() - 2) + "bc";
+        String poolsPath = sourcePath.substring(0, sourcePath.length() - 2) + "pool";
+        String vmPath = sourcePath.substring(0, sourcePath.length() - 2) + "vm";
+
+        BytecodeGenerator bytecode = new BytecodeGenerator();
+        Environment environment = new Environment();
+        TreeWalkVisitor visitor = new TreeWalkVisitor(bytecode, environment);
+
         visitor.visit(pt);
+        bytecode.displayBytecodes(bytecodePath);
+        environment.displayEnvironment(poolsPath);
 
-        String sourcePath = sourceFile.getAbsolutePath();
+        VM vm = new VM(environment, bytecode);
+        vm.run();
+        environment.displayEnvironment(vmPath);
 
-        String bytecodePath, poolsPath;
-        if (sourcePath.endsWith(".mj")) {
-            bytecodePath = sourcePath.substring(0, sourcePath.length() - 2) + "bc";
-            poolsPath = sourcePath.substring(0, sourcePath.length() - 2) + "pool";
-
-        } else {
-            throw new RuntimeException("Source file must end with .mj.");
-        }
-        
-        visitor.displayBytecodes(bytecodePath);
-        visitor.displayEnvironment(poolsPath);
     }
 
     public static void main(String[] args) throws Exception {
@@ -36,7 +36,10 @@ public class Main {
             throw new RuntimeException("Incorrect number of arguments.");
         }
     
-        File sourceFile = new File(args[0]);
-        run(sourceFile);
+        String sourcePath = new File(args[0]).getAbsolutePath();
+        if (!sourcePath.endsWith(".mj")) {
+            throw new RuntimeException("Error: Source file must end with .mj.");
+        }
+        run(sourcePath);
     }
 }
