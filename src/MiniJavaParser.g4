@@ -35,7 +35,44 @@ options {
     tokenVocab = MiniJavaLexer;
 }
 
-compilationUnit : block EOF;
+compilationUnit : methodDeclaration* EOF;
+
+methodDeclaration
+    : (typeType | VOID) identifier formalParameters methodBody = block
+    ;
+
+variableDeclarator
+    : identifier ('=' variableInitializer)?
+    ;
+
+variableInitializer
+    : arrayInitializer
+    | expression
+    ;
+
+arrayInitializer
+    : '{' (variableInitializer (',' variableInitializer)* ','?)? '}'
+    ;
+
+formalParameters
+    : '(' formalParameterList? ')'
+    ;
+
+formalParameterList
+    : formalParameter (',' formalParameter)*
+    ;
+
+formalParameter
+    : typeType identifier
+    ;
+
+literal
+    : DECIMAL_LITERAL
+    | CHAR_LITERAL
+    | STRING_LITERAL
+    | BOOL_LITERAL
+    | NULL_LITERAL
+    ;
 
 block
     : '{' blockStatement* '}'
@@ -47,8 +84,28 @@ blockStatement
     ;
 
 localVariableDeclaration
-    : primitiveType identifier '=' expression
-    | primitiveType identifier
+    : VAR identifier '=' expression
+    | typeType variableDeclarator
+    ;
+
+identifier
+    : IDENTIFIER
+    | MODULE
+    | OPEN
+    | REQUIRES
+    | EXPORTS
+    | OPENS
+    | TO
+    | USES
+    | PROVIDES
+    | WITH
+    | TRANSITIVE
+    | YIELD
+    | SEALED
+    | PERMITS
+    | RECORD
+    | VAR
+    | ASSERT
     ;
 
 statement
@@ -82,12 +139,15 @@ expressionList
 
 expression
     : primary
+    | expression '[' expression ']'
+    | methodCall
     | expression postfix = ('++' | '--')
     | prefix = ('+' | '-' | '++' | '--' | '~' | 'not') expression
-    | '(' primitiveType ')' expression
+    | '(' typeType ')' expression
+    | NEW creator
     | expression bop = ('*' | '/' | '%') expression
     | expression bop = ('+' | '-') expression
-    | expression bop = ('<<' | '>>>' | '>>')  expression
+    | expression bop = ('<<' | '>>>' | '>>') expression
     | expression bop = ('<=' | '>=' | '>' | '<') expression
     | expression bop = ('==' | '!=') expression
     | expression bop = '&' expression
@@ -103,32 +163,25 @@ expression
 
 primary : '(' expression ')' | literal | identifier ;
 
-literal
-    : DECIMAL_LITERAL
-    | CHAR_LITERAL
-    | STRING_LITERAL
-    | BOOL_LITERAL
-    | NULL_LITERAL
+methodCall
+    : identifier arguments
     ;
 
-identifier
-    : IDENTIFIER
-    | MODULE
-    | OPEN
-    | REQUIRES
-    | EXPORTS
-    | OPENS
-    | TO
-    | USES
-    | PROVIDES
-    | WITH
-    | TRANSITIVE
-    | YIELD
-    | SEALED
-    | PERMITS
-    | RECORD
-    | VAR
-    | ASSERT
+creator
+    : createdName arrayCreatorRest
+    ;
+
+createdName
+    : primitiveType
+    ;
+
+arrayCreatorRest
+    : ('[' ']')+ arrayInitializer
+    | ('[' expression ']')+ ('[' ']')*
+    ;
+
+typeType
+    : primitiveType ('[' ']')*
     ;
 
 primitiveType
@@ -136,4 +189,8 @@ primitiveType
     | CHAR
     | INT
     | STRING
+    ;
+
+arguments
+    : '(' expressionList? ')'
     ;

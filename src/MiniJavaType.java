@@ -1,37 +1,54 @@
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Map;
 
-public enum MiniJavaType {
-    STRING("string", 5),
-    INT("int", 4),
-    CHAR("char", 3),
-    BOOLEAN("boolean", 2),
-    NULL("null", 1),
-    CONSTANT("constant", 0);
+public class MiniJavaType {
+    public String name;
 
-    private final String name;
-    private final int priority;
-    MiniJavaType(String name, int priority) {
-        this.name = name;
-        this.priority = priority;
+    public MiniJavaType(String type) {
+        this.name = type;
     }
 
-    @Override
-    public String toString() {
-        return name;
+    public boolean isBoolean() {
+        return name.equals("boolean");
+    }
+    public boolean isInt() {
+        return name.equals("int");
+    }
+    public boolean isChar() {
+        return name.equals("char");
+    }
+    public boolean isArray() {
+        return name.equals("array") || name.contains("[]");
+    }
+    public boolean isString() {
+        return name.equals("string");
+    }
+    public boolean isNull() {
+        return name.equals("null");
+    }
+    public boolean isVoid() {
+        return name.equals("void");
     }
 
-    public static final Comparator<MiniJavaType> PRIORITY_COMPARATOR =
-            Comparator.comparingInt(pt -> pt.priority);
+        private static final Map<String, Integer> PRIORITY_MAP = Map.of(
+            "string", 4,
+            "int", 3,
+            "char", 2,
+            "boolean", 1
+    );
 
-    public boolean isString() { return this == STRING; }
-    public boolean isInt() { return this == INT; }
-    public boolean isChar() { return this == CHAR; }
-    public boolean isBoolean() { return this == BOOLEAN; }
-    public boolean isNull() { return this == NULL; }
+
+    private static final Comparator<String> PRIORITY_COMPARATOR = new Comparator<String>() {
+        @Override
+        public int compare(String a, String b) {
+            return Integer.compare(PRIORITY_MAP.get(a), PRIORITY_MAP.get(b));
+        }
+    };
 
     public static MiniJavaType maxType(MiniJavaType type1, MiniJavaType type2) {
-        return Collections.max(Arrays.asList(type1, type2), MiniJavaType.PRIORITY_COMPARATOR);
+        var ret = Collections.max(Arrays.asList(type1.name, type2.name), PRIORITY_COMPARATOR);
+        return new MiniJavaType(ret);
     }
 }

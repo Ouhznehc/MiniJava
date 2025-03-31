@@ -1,4 +1,4 @@
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Stack;
 
 public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
@@ -17,21 +17,6 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     private Stack<Integer> breakStack = new Stack<>();
     private Stack<Integer> continueStack = new Stack<>();
 
-    private void getVariable(MiniJavaObject variable) {
-        if (variable.isGlobal()) {
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_GLOBAL, variable.index, null);
-        } else {
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index, null);
-        }
-    }
-
-    private void setVariable(MiniJavaObject variable) {
-        if (variable.isGlobal()) {
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_GLOBAL, variable.index, null);
-        } else {
-            bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index, null);
-        }
-    }
     
     private MiniJavaObject findVariableByID(String id) {
         // First try to find the variable in the global scope
@@ -116,24 +101,40 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         return ctx.bop != null && ctx.bop.getType() == MiniJavaParser.QUESTION;
     }
 
-    private void newSymbolTable() {
-        environment.symbolTable.get(curScope).add(new HashMap<>());
-    }
-
-    private void removeSymbolTable() {
-        environment.symbolTable.get(curScope).removeLast();
-    }
-
     @Override
     public MiniJavaObject visitCompilationUnit(MiniJavaParser.CompilationUnitContext ctx) {
         return visitChildren(ctx);
     }
 
     @Override
+    public MiniJavaObject visitMethodDeclaration(MiniJavaParser.MethodDeclarationContext ctx) {
+        // className extends superClassName
+        var methodName = ctx.identifier().getText();
+        var paramTypes = new ArrayList<String>();
+        var params = new ArrayList<MiniJavaObject>();
+        if (ctx.formalParameters().formalParameterList() != null) {
+            for (var param : ctx.formalParameters().formalParameterList().formalParameter()) {
+                var type = param.typeType().getText();
+                var id = param.identifier().getText();
+                paramTypes.add(type);
+                params.add(new MiniJavaObject(type, id));
+            }
+        }
+        var methodSig = new MethodSignature(methodName, paramTypes);
+        var methodMangle = methodSig.mangle();
+        environment.newMethod(methodSig, methodMangle, params);
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_METHOD, methodMangle);
+
+        visit(ctx.methodBody);
+
+        return null;
+    }
+
+    @Override
     public MiniJavaObject visitBlock(MiniJavaParser.BlockContext ctx) {
-        newSymbolTable();
+        environment.newSymbolTable();
         var ret = visitChildren(ctx);
-        removeSymbolTable();
+        environment.removeSymbolTable();
         return ret;
     }
 
@@ -144,23 +145,21 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
 
     @Override
     public MiniJavaObject visitLocalVariableDeclaration(MiniJavaParser.LocalVariableDeclarationContext ctx) {
-        // primitiveType identifier
-        if (ctx.getChildCount() == 2) {
-            var defaultValue = visit(ctx.primitiveType());
+        // typeType variableDeclarator
+        if (ctx.VAR() == null) {
+            var defaultValue = visit(ctx.typeType());
             var identifier = ctx.identifier().getText();
-            var ret = environment.newVariable(curScope, identifier, defaultValue);
-            return ret;
+            environment.newVariable(identifier, defaultValue);
+            return null;
         }
-        // primitiveType identifier '=' expression
-        else if (ctx.getChildCount() == 4) {
-            var defaultValue = visit(ctx.primitiveType());
+        // VAR identifier '=' expression
+        else {
             var identifier = ctx.identifier().getText();
-            visit(ctx.expression());
-            var ret = environment.newVariable(curScope, identifier, defaultValue);
-            setVariable(ret);
-            return ret;
+            var expression = visit(ctx.expression());
+            environment.newVariable(identifier, expression);
+            
+            return null;
         }
-        return null;
     }
 
     private MiniJavaObject visitIfStatement(MiniJavaParser.StatementContext ctx) {
@@ -221,7 +220,7 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     private MiniJavaObject visitForStatement(MiniJavaParser.StatementContext ctx) {
         // for ( forControl ) statement
 
-        newSymbolTable();
+        environment.newSymbolTable();
 
         // Process initialization (if present)
         var forInit = ctx.forControl().forInit();
@@ -265,7 +264,7 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         breakStack.pop();
         continueStack.pop();
 
-        removeSymbolTable();
+        environment.removeSymbolTable();
 
         return null;
     }
@@ -352,7 +351,7 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         // For assignment, we only need to push rhs to stack
         if (ctx.bop.getType() == MiniJavaParser.ASSIGN) {
             var rhs = visit(ctx.expression(1));
-            setVariable(variable);
+            bytecodeGenerator.setVariable(variable);
             return new MiniJavaObject(rhs.type, null);
         }
         // First push rhs to stack, then lhs
@@ -362,47 +361,47 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         switch (ctx.bop.getType()) {
             case MiniJavaParser.ADD_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_ADD, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.SUB_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_SUB, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.MUL_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_MUL, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.DIV_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_DIV, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.MOD_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_MOD, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.LSHIFT_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_LSHIFT, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.RSHIFT_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_RSHIFT, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.URSHIFT_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_URSHIFT, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.AND_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_BIT_AND, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.OR_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_BIT_OR, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             case MiniJavaParser.XOR_ASSIGN:
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_BIT_XOR, null, null);
-                setVariable(variable);
+                bytecodeGenerator.setVariable(variable);
                 return new MiniJavaObject(type, null);
             default:
                 return null;
@@ -425,10 +424,10 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         var exp = visit(ctx.expression(0));
         if (ctx.postfix.getType() == MiniJavaParser.INC) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_POST_INC, null, null);
-            setVariable(variable);
+            bytecodeGenerator.setVariable(variable);
         } else if (ctx.postfix.getType() == MiniJavaParser.DEC) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_POST_DEC, null, null);
-            setVariable(variable);
+            bytecodeGenerator.setVariable(variable);
         } else {
             throw new RuntimeException("Unknown postfix expression: " + ctx.postfix.getText());
         }
@@ -439,11 +438,11 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
         var exp = visit(ctx.expression(0));
         if (ctx.prefix.getType() == MiniJavaParser.INC) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_PRE_INC, null, null);
-            setVariable(exp);
+            bytecodeGenerator.setVariable(exp);
             return exp;
         } else if (ctx.prefix.getType() == MiniJavaParser.DEC) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_PRE_DEC, null, null);
-            setVariable(exp);
+            bytecodeGenerator.setVariable(exp);
             return exp;
         } else if (ctx.prefix.getType() == MiniJavaParser.TILDE) {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_BIT_NOT, null, null);
@@ -520,7 +519,7 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
             bytecodeGenerator.emitBytecode(BytecodeType.OP_POP, null, null);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_TRUE, null, null);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_LABEL, false_label, null);
-            return new MiniJavaObject(MiniJavaType.BOOLEAN, null);
+            return new MiniJavaObject("boolean", null);
         } else if (isQuestionExp(ctx)) {
             Integer false_label = curLabel++;
             Integer end_label = curLabel++;
@@ -542,8 +541,8 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
             return visitPostExp(ctx);
         } else if (ctx.prefix != null) {
             return visitPrefixExp(ctx);
-        } else if (ctx.primitiveType() != null) {
-            var type = visit(ctx.primitiveType()).type;
+        } else if (ctx.typeType() != null) {
+            var type = visit(ctx.typeType()).type;
             var exp = visit(ctx.expression(0));
             exp.type = type;
             return exp;
@@ -563,29 +562,29 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     @Override
     public MiniJavaObject visitLiteral(MiniJavaParser.LiteralContext ctx) {
         if (ctx.DECIMAL_LITERAL() != null) {
-            var ret = new MiniJavaObject(MiniJavaType.INT, Integer.parseInt(ctx.getText()));
-            ret = environment.newConstant(curScope, ret);
+            var ret = new MiniJavaObject("int", Integer.parseInt(ctx.getText()));
+            ret = environment.newConstant(ret);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, ret.index, null);
             return ret;
         } else if (ctx.STRING_LITERAL() != null) {
             var str = ctx.getText();
-            var ret = new MiniJavaObject(MiniJavaType.STRING, str.substring(1, str.length() - 1));
-            ret = environment.newConstant(curScope, ret);
+            var ret = new MiniJavaObject("string", str.substring(1, str.length() - 1));
+            ret = environment.newConstant(ret);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, ret.index, null);
             return ret;
         } else if (ctx.BOOL_LITERAL() != null) {
-            var ret = new MiniJavaObject(MiniJavaType.BOOLEAN, "true".equals(ctx.getText()));
-            ret = environment.newConstant(curScope, ret);
+            var ret = new MiniJavaObject("boolean", "true".equals(ctx.getText()));
+            ret = environment.newConstant(ret);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, ret.index, null);
             return ret;
         } else if (ctx.CHAR_LITERAL() != null) {
-            var ret = new MiniJavaObject(MiniJavaType.CHAR, ctx.getText().charAt(1));
-            ret = environment.newConstant(curScope, ret);
+            var ret = new MiniJavaObject("char", ctx.getText().charAt(1));
+            ret = environment.newConstant(ret);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, ret.index, null);
             return ret;
         } else if (ctx.NULL_LITERAL() != null) {
-            var ret = new MiniJavaObject(MiniJavaType.NULL, null);
-            ret = environment.newConstant(curScope, ret);
+            var ret = new MiniJavaObject("null", null);
+            ret = environment.newConstant(ret);
             bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, ret.index, null);
             return ret;
         } else {
@@ -597,30 +596,14 @@ public class TreeWalkVisitor extends MiniJavaParserBaseVisitor<MiniJavaObject> {
     public MiniJavaObject visitIdentifier(MiniJavaParser.IdentifierContext ctx) {
         String identifier = ctx.IDENTIFIER().getText();
         var variable = findVariableByID(identifier);
-        getVariable(variable);
+        bytecodeGenerator.getVariable(variable);
         return variable;
     }
 
     @Override
     public MiniJavaObject visitPrimitiveType(MiniJavaParser.PrimitiveTypeContext ctx) {
-        String type_str = ctx.getText();
-        MiniJavaType type;
+        String type = ctx.getText();
         Object value = null;
-        if ("int".equals(type_str)) {
-            type = MiniJavaType.INT;
-            value = 0;
-        } else if ("char".equals(type_str)) {
-            type = MiniJavaType.CHAR;
-            value = 0;
-        } else if ("boolean".equals(type_str)) {
-            type = MiniJavaType.BOOLEAN;
-            value = false;
-        } else if ("string".equals(type_str)) {
-            type = MiniJavaType.STRING;
-            value = "";
-        } else {
-            throw new RuntimeException("Unknown primitive type: " + type_str);
-        }
         return new MiniJavaObject(type, value);
     }
 }

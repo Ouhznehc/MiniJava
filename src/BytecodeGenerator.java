@@ -14,6 +14,31 @@ public class BytecodeGenerator {
     public void emitBytecode(BytecodeType type, Integer arg1, Integer arg2) {
         bytecodes.add(new Bytecode(type, arg1, arg2));
     }
+    public void emitBytecode(BytecodeType type, Integer arg1) {
+        bytecodes.add(new Bytecode(type, arg1));
+    }
+    public void emitBytecode(BytecodeType type, String method) {
+        bytecodes.add(new Bytecode(type, method));
+    }
+    public void emitBytecode(BytecodeType type) {
+        bytecodes.add(new Bytecode(type));
+    }
+
+    public void getVariable(MiniJavaObject variable) {
+        if (variable.isGlobal()) {
+            emitBytecode(BytecodeType.OP_GET_GLOBAL, variable.index, null);
+        } else {
+            emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index, null);
+        }
+    }
+
+    public void setVariable(MiniJavaObject variable) {
+        if (variable.isGlobal()) {
+            emitBytecode(BytecodeType.OP_SET_GLOBAL, variable.index, null);
+        } else {
+            emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index, null);
+        }
+    }
 
 
     public void displayBytecodes(String filePath) {

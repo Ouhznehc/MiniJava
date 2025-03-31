@@ -34,15 +34,15 @@ public class VM {
                 pc += 1;
                 return;
             case OP_NIL:
-                stack.push(new MiniJavaObject(MiniJavaType.NULL, null));
+                stack.push(new MiniJavaObject("null", null));
                 pc += 1;
                 return;
             case OP_TRUE:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, true));
+                stack.push(new MiniJavaObject("boolean", true));
                 pc += 1;
                 return;
             case OP_FALSE:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, false));
+                stack.push(new MiniJavaObject("boolean", false));
                 pc += 1;
                 return;
             case OP_POP:
@@ -125,9 +125,9 @@ public class VM {
         if (bytecode.type == BytecodeType.OP_POST_INC || bytecode.type == BytecodeType.OP_POST_DEC) {
             var operand = (int) stack.peek().value;
             if (bytecode.type == BytecodeType.OP_POST_INC) {
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand + 1));
+                stack.push(new MiniJavaObject("int", operand + 1));
             } else {
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand - 1));
+                stack.push(new MiniJavaObject("int", operand - 1));
             }
             return;
         }
@@ -135,18 +135,18 @@ public class VM {
         var operand = (int) stack.pop().value;
         switch (bytecode.type) {
             case OP_PRE_INC:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand + 1));
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand + 1));
+                stack.push(new MiniJavaObject("int", operand + 1));
+                stack.push(new MiniJavaObject("int", operand + 1));
                 return;
             case OP_PRE_DEC:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand - 1));
-                stack.push(new MiniJavaObject(MiniJavaType.INT, operand - 1));
+                stack.push(new MiniJavaObject("int", operand - 1));
+                stack.push(new MiniJavaObject("int", operand - 1));
                 return;
             case OP_NEG:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, -operand));
+                stack.push(new MiniJavaObject("int", -operand));
                 return;
             case OP_BIT_NOT:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, ~operand));
+                stack.push(new MiniJavaObject("int", ~operand));
                 return;
             default:
                 throw new RuntimeException("Unknown unary operator: " + bytecode.type);
@@ -158,55 +158,55 @@ public class VM {
         var right = (int) stack.pop().value;
         switch (bytecode.type) {
             case OP_ADD:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left + right));
+                stack.push(new MiniJavaObject("int", left + right));
                 return;
             case OP_SUB:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left - right));
+                stack.push(new MiniJavaObject("int", left - right));
                 return;
             case OP_MUL:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left * right));
+                stack.push(new MiniJavaObject("int", left * right));
                 return;
             case OP_DIV:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left / right));
+                stack.push(new MiniJavaObject("int", left / right));
                 return;
             case OP_MOD:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left % right));
+                stack.push(new MiniJavaObject("int", left % right));
                 return;
             case OP_LSHIFT:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left << right));
+                stack.push(new MiniJavaObject("int", left << right));
                 return;
             case OP_RSHIFT:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left >> right));
+                stack.push(new MiniJavaObject("int", left >> right));
                 return;
             case OP_URSHIFT:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left >>> right));
+                stack.push(new MiniJavaObject("int", left >>> right));
                 return;
             case OP_BIT_AND:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left & right));
+                stack.push(new MiniJavaObject("int", left & right));
                 return;
             case OP_BIT_OR:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left | right));
+                stack.push(new MiniJavaObject("int", left | right));
                 return;
             case OP_BIT_XOR:
-                stack.push(new MiniJavaObject(MiniJavaType.INT, left ^ right));
+                stack.push(new MiniJavaObject("int", left ^ right));
                 return;
             case OP_EQ:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left == right));
+                stack.push(new MiniJavaObject("boolean", left == right));
                 return;
             case OP_NEQ:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left != right));
+                stack.push(new MiniJavaObject("boolean", left != right));
                 return;
             case OP_GE:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left >= right));
+                stack.push(new MiniJavaObject("boolean", left >= right));
                 return;
             case OP_LE:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left <= right));
+                stack.push(new MiniJavaObject("boolean", left <= right));
                 return;
             case OP_GT:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left > right));
+                stack.push(new MiniJavaObject("boolean", left > right));
                 return;
             case OP_LT:
-                stack.push(new MiniJavaObject(MiniJavaType.BOOLEAN, left < right));
+                stack.push(new MiniJavaObject("boolean", left < right));
                 return;
             default:
                 throw new RuntimeException("Unknown binary operator: " + bytecode.type);
