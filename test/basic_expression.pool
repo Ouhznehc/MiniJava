@@ -1,13 +1,18 @@
-================= Scope: 0_global =================
+================= Scope: main@ca66f40 =================
 ------------- Constant Pool ------------
 Index Type       Value     
-0     constant   1         
-1     constant   2         
-2     constant   1         
-3     constant   10        
+0     int        2         
+1     int        0         
+2     int        3         
+3     int        0         
+4     int        1         
+5     int        1         
+6     int        2         
+7     int        2         
+8     int        3         
+9     int        1         
+10    null       null      
 
 ------------- Variable Pool ------------
 Index Name       Type       Value     
-0     a          int        null      
-1     b          int        null      
-2     i          int        null      
+0     a          array      null      

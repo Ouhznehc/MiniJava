@@ -25,19 +25,15 @@ public class BytecodeGenerator {
     }
 
     public void getVariable(MiniJavaObject variable) {
-        if (variable.isGlobal()) {
-            emitBytecode(BytecodeType.OP_GET_GLOBAL, variable.index, null);
-        } else {
-            emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index, null);
-        }
+        emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index);
     }
 
     public void setVariable(MiniJavaObject variable) {
-        if (variable.isGlobal()) {
-            emitBytecode(BytecodeType.OP_SET_GLOBAL, variable.index, null);
-        } else {
-            emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index, null);
+        if (variable.type.isArray()) {
+            emitBytecode(BytecodeType.OP_SET_INDEX);
+            return;
         }
+        else emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index);
     }
 
 

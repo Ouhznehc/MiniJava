@@ -11,16 +11,9 @@ public enum BytecodeType {
 
     OP_GET_LOCAL("OP_GET_LOCAL"),
     OP_SET_LOCAL("OP_SET_LOCAL"),
-
-    OP_GET_GLOBAL("OP_GET_GLOBAL"),
-    OP_SET_GLOBAL("OP_SET_GLOBAL"),
-
-    // Pop the top element, inc/dec and push back 2 value(the same).
-    OP_PRE_INC("OP_PRE_INC"),
-    OP_PRE_DEC("OP_PRE_DEC"),
-    // Get but not pop the top element, inc/dec and push back.
-    OP_POST_INC("OP_POST_INC"),
-    OP_POST_DEC("OP_POST_DEC"),
+    
+    OP_INC("OP_INC"),
+    OP_DEC("OP_DEC"),
 
     OP_ADD("OP_ADD"),
     OP_SUB("OP_SUB"),
@@ -59,7 +52,8 @@ public enum BytecodeType {
     OP_CALL("OP_CALL"),
     OP_RETURN("OP_RETURN"),
 
-    OP_ARRAY("OP_ARRAY"),
+    OP_NEW_ARRAY("OP_NEW_ARRAY"),
+    OP_DUP("OP_DUP"),
     OP_GET_INDEX("OP_GET_INDEX"),
     OP_SET_INDEX("OP_SET_INDEX");
 

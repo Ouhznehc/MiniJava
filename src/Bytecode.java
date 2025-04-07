@@ -28,7 +28,7 @@ public class Bytecode {
     public String toString() {
         if (arg1 == null && arg2 == null && method == null) {
             return String.format("%s", type);
-        } else if (arg2 == null) {
+        } else if (arg2 == null && method == null) {
             return String.format("%s %d", type, arg1);
         } else if (method != null) {
             return String.format("========= %s =========", method);

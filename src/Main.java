@@ -14,20 +14,18 @@ public class Main {
 
         String bytecodePath = sourcePath.substring(0, sourcePath.length() - 2) + "bc";
         String poolsPath = sourcePath.substring(0, sourcePath.length() - 2) + "pool";
-        String vmPath = sourcePath.substring(0, sourcePath.length() - 2) + "vm";
 
         BytecodeGenerator bytecode = new BytecodeGenerator();
         Environment environment = new Environment();
-        TreeWalkVisitor visitor = new TreeWalkVisitor(bytecode, environment);
 
-        visitor.visit(pt);
+        SemanticsVisitor semanticsVisitor = new SemanticsVisitor();
+        semanticsVisitor.visit(pt);
+
+        BytecodeVisitor bytecodeVisitor = new BytecodeVisitor(bytecode, environment, semanticsVisitor);
+        bytecodeVisitor.visit(pt);
+
         bytecode.displayBytecodes(bytecodePath);
         environment.displayEnvironment(poolsPath);
-
-        VM vm = new VM(environment, bytecode);
-        vm.run();
-        environment.displayEnvironment(vmPath);
-
     }
 
     public static void main(String[] args) throws Exception {

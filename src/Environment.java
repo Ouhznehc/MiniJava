@@ -12,15 +12,15 @@ import java.util.Map;
 // this global name would not conflict with other function name.
 public class Environment {
     public String scope = null;
+    public Integer label = 0;
+    public Integer tempIndex = 0;
 
     public final Map<String, Pools> pools;
     public final Map<String, ArrayList<Map<String, MiniJavaObject>>> symbolTable;
-    public final Map<MethodSignature, String> methodMap;
 
     public Environment() {
         pools = new HashMap<>();
         symbolTable = new HashMap<>();
-        methodMap = new HashMap<>();
     }
 
     public void newSymbolTable() {
@@ -37,26 +37,36 @@ public class Environment {
         symbolTable.put(scope, new ArrayList<>());
     }
 
+    public Integer newLabel() {
+        return label++;
+    }
+
+    public MiniJavaObject findVariable(String id) {
+        // Try to find the variable in the current scope
+        var table = symbolTable.get(scope);
+        for (var i = table.size() - 1; i >= 0; i--) {
+            var symbol = table.get(i).get(id);
+            if (symbol != null) {
+                return symbol;
+            }
+        }
+        throw new RuntimeException("Variable " + id + " not found");
+    }
+
     // Register a new method
-    // 1. put the method signature into the methodMap
-    // 2. create a new symbol table for the method parameters
-    // 3. create a new pool for the method
-    // 4. add parameters to the symbol table
-    public void newMethod(MethodSignature signature, String scope, ArrayList<MiniJavaObject> parameters) {
-        methodMap.put(signature, scope);
-
+    // 1. create a new symbol table for the method parameters
+    // 2. create a new pool for the method
+    // 3. add parameters to the symbol table
+    public void newMethod(String scope, ArrayList<MiniJavaObject> parameters) {
         newScope(scope);
-
         newSymbolTable();
-        for (var parameter : parameters) newVariable(parameter.name, parameter);
+        for (var parameter : parameters) newVariable(parameter.type, parameter.name);
     }
     
-    public MiniJavaObject newVariable(String name, MiniJavaObject object) {
-        object.name = name;
+    public MiniJavaObject newVariable(MiniJavaType type, String name) {
+        var object = new MiniJavaObject(type, name);
         object.scope = scope;
         object.index = pools.get(scope).variableIndex++;
-        object.type = object.type;
-        object.value = null; 
 
         pools.get(scope).variablePool.add(object);
         var table = symbolTable.get(scope).getLast();
@@ -64,15 +74,17 @@ public class Environment {
         return object;
     }
 
-    public MiniJavaObject newConstant(MiniJavaObject object) {
-        object.name = null;
+    public MiniJavaObject newConstant(String type, Object value) {
+        var object = new MiniJavaObject(type, value);
         object.scope = scope;
         object.index = pools.get(scope).constantIndex++;
-        object.type = object.type;
-        object.value = object.value;
 
         pools.get(scope).constantPool.add(object);
         return object;
+    }
+
+    public MiniJavaObject newTemp() {
+        return newVariable(new MiniJavaType("int"), tempIndex++ + "_temp");
     }
 
     public void displayEnvironment(String filePath) {

@@ -1,17 +1,12 @@
 public class MiniJavaObject {
     public MiniJavaType type = null;
-
-    // Optional value, useless for bytecode generation.
-    // Reserverd for runtime execution.
-    public Object value = null;
-
     public String name = null;
     public String scope = null;
     public Integer index = null;
 
-    public MiniJavaObject(String type) {
-        this.type = new MiniJavaType(type);
-    }
+    // Optional value, useless for bytecode generation.
+    // Reserverd for runtime execution.
+    public Object value = null;
 
     public MiniJavaObject(String type, String name) {
         this.type = new MiniJavaType(type);
@@ -19,7 +14,7 @@ public class MiniJavaObject {
     }
 
     public MiniJavaObject(MiniJavaType type, String name) {
-        this.type = new MiniJavaType(type.name);
+        this.type = type;
         this.name = name;
     }
 
@@ -28,10 +23,4 @@ public class MiniJavaObject {
         this.value = value;
     }
 
-    public boolean isGlobal() {
-        return scope.equals("0_global");
-    }
-    public boolean isLocal() {
-        return !isGlobal();
-    }
 }
