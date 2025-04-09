@@ -1,6 +1,13 @@
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
+
+/**
+ * This class represents a pool of objects, including a constant pool and a variable pool.
+ * The constant pool is used to store constant values, while the variable pool is used to store variables.
+ * Each Method in MiniJava has its own pool of objects.
+ * `constantIndex` and `variableIndex` are used when creating new objects.
+ */
 public class Pools {
     public ArrayList<MiniJavaObject> constantPool;
     public ArrayList<MiniJavaObject> variablePool;

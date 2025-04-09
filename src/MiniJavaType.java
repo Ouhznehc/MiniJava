@@ -1,8 +1,9 @@
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-
+/**
+ * This class represents a type in the MiniJava language.
+ * Simply put, it is a wrapper around a string that represents the type.
+ * It provides methods to check the type and to compare types.
+ * It also provides methods to check if a type can be cast to another type.
+ */
 public class MiniJavaType {
     public String name;
 
@@ -34,8 +35,6 @@ public class MiniJavaType {
 
     public boolean isEqual(MiniJavaType other) {
         if (this.name.equals(other.name)) return true;
-        if (this.isNull() && other.isArray()) return true;
-        if (this.isArray() && other.isNull()) return true;
         return false;
     }
 
@@ -43,40 +42,22 @@ public class MiniJavaType {
         return isBoolean() || isInt() || isChar() || isString() || isNull();
     }
 
-        private static final Map<String, Integer> PRIORITY_MAP = Map.of(
-            "string", 4,
-            "int", 3,
-            "char", 2,
-            "boolean", 1
-    );
-
-
-    private static final Comparator<String> PRIORITY_COMPARATOR = new Comparator<String>() {
-        @Override
-        public int compare(String a, String b) {
-            return Integer.compare(PRIORITY_MAP.get(a), PRIORITY_MAP.get(b));
-        }
-    };
-
+    // `int` can be explicitly cast to `char`
+    // all primitive types can be explicitly cast to `string`
     public boolean canExplicitCastTo(MiniJavaType other) {
-        if (this.isEqual(other)) return true;
-        if (this.isNull() && other.isArray()) return true;
+        if (this.canImplicitlyCastTo(other)) return true;
         if (this.isPrimitive() && other.isString()) return true;
         if (this.isInt() && other.isChar()) return true;
-        if (this.isChar() && other.isInt()) return true;
         return false;
     }
 
+    // Only `char` can be implicitly cast to `int`
+    // Only `null` can be implicitly cast to `array[]`
     public boolean canImplicitlyCastTo(MiniJavaType toType) {
         if (this.isEqual(toType)) return true;
         if (this.isChar() && toType.isInt()) return true;
         if (this.isNull() && toType.isArray()) return true;
         return false;
-    }
-
-    public static MiniJavaType maxType(MiniJavaType type1, MiniJavaType type2) {
-        var ret = Collections.max(Arrays.asList(type1.name, type2.name), PRIORITY_COMPARATOR);
-        return new MiniJavaType(ret);
     }
 
     public String toString() {

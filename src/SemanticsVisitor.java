@@ -234,24 +234,11 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         // Visit the variable declaration, add it to the symbol table
 
         // For auto type inference, the type is is the type of the expression.
-        // But we need to handle a special case:
-        // for DECIMAL_LITERAL, if the value is a valid value for char, we treat it as char,
-        // but in auto type inference, we treat it as int.
         if (ctx.VAR() != null) {
             var id = ctx.identifier().getText();
-            var exp_str = ctx.expression().getText();
-            // If the expression is a DECIMAL_LITERAL, return int type
-            if (exp_str.matches("[0-9]+")) {
-                setVariableType(id, new MiniJavaType("int"));
-                setType(ctx.expression(), new MiniJavaType("int"));
-                return null;
-            }
-            // Else return the type of the expression
-            else {
-                var type = visit(ctx.expression());
-                setVariableType(id, type);
-                return null;
-            }
+            var type = visit(ctx.expression());
+            setVariableType(id, type);
+            return null;
         }
 
         // For variableDeclarator, the type of the variable is `typeType`, 
@@ -266,7 +253,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
             return null;
         }
         var varInit = visit(varDecl.variableInitializer());
-        if (typeType.isEqual(varInit)) {
+        if (varInit.canExplicitCastTo(typeType)) {
             setVariableType(id, typeType);
             return null;
         } else {
@@ -300,7 +287,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         for (var initializer : initializerList) {
             var initType = visit(initializer);
             if (type == null) type = initType;
-            if (!type.isEqual(initType)) {
+            if (!initType.canImplicitlyCastTo(type)) {
                 throw new RuntimeException("[ERROR] Type mismatch: " + type + " != " + initType);
             }
         }
@@ -341,13 +328,10 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
 
     @Override
     public MiniJavaType visitLiteral(MiniJavaParser.LiteralContext ctx) {
+        // ! Note that in course lab, we suppurt to treat DECIMAL_LITERAL as char
+        // ! but in this implementation, we only support it as int
         if (ctx.DECIMAL_LITERAL() != null) {
-            // Check if the decimal literal is a valid value for char
-            // If so, we treat it as char, else we treat it as int
-            var value = ctx.DECIMAL_LITERAL().getText();
-            var intValue = Integer.parseInt(value);
-            if (-127 <= intValue && intValue <= 127) return new MiniJavaType("char");
-            else return new MiniJavaType("int");
+            return new MiniJavaType("int");
         } else if (ctx.CHAR_LITERAL() != null) {
             return new MiniJavaType("char");
         } else if (ctx.STRING_LITERAL() != null) {
@@ -391,7 +375,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
                 throw new RuntimeException("[ERROR] Type mismatch: " + lhs + " should be boolean");
             }
             var false_exp = visit(ctx.expression(2));
-            if (!false_exp.isEqual(rhs)) {
+            if (!false_exp.canImplicitlyCastTo(rhs) && !rhs.canImplicitlyCastTo(false_exp)) {
                 throw new RuntimeException("[ERROR] Type mismatch: " + false_exp + " should be " + rhs);
             }
             return rhs;
@@ -505,7 +489,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
             var initializer = visit(creatorRest.arrayInitializer());
             var dim = ctx.arrayCreatorRest().LBRACK().size();
             var declType = new MiniJavaType(primitiveType.name + "[]".repeat(dim));
-            if (!initializer.isEqual(declType)) {
+            if (!initializer.canExplicitCastTo(declType)) {
                 throw new RuntimeException("[ERROR] Type mismatch: " + initializer + " should be " + declType);
             }
             return initializer;

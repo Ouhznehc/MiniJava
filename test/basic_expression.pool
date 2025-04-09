@@ -1,4 +1,4 @@
-================= Scope: main@ca66f40 =================
+================= Scope: main@35a20c04 =================
 ------------- Constant Pool ------------
 Index Type       Value     
 0     int        2         
@@ -15,4 +15,4 @@ Index Type       Value
 
 ------------- Variable Pool ------------
 Index Name       Type       Value     
-0     a          array      null      
+0     a          int[][]    null      

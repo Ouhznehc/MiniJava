@@ -1,3 +1,8 @@
+/**
+ * This class represents a bytecode instruction in the MiniJava language.
+ * It contains the type of the instruction, and optional arguments.
+ * The `method` is only used for displaying the method name in the bytecode.
+ */
 public class Bytecode {
     public BytecodeType type = null;;
     public Integer arg1 = null;
