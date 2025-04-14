@@ -194,42 +194,60 @@ public enum BytecodeType {
     // Usage: OP_JUMP_IF_FALSE <label>
     OP_JUMP_IF_FALSE("OP_JUMP_IF_FALSE"),
 
-    // Creates a new class.
-    // Stack before: [...]
-    // Stack after: [..., class]
-    // Usage: OP_CLASS <class_name>
-    OP_CLASS("OP_CLASS"),
-
-    // Sets up inheritance between two classes.
-    // Stack before: [..., subclass, superclass]
-    // Stack after: [...]
-    // Usage: OP_INHERIT
-    OP_INHERIT("OP_INHERIT"),
-
-    // Find the string constant in the constant pool with `method_name`
-    // Defines a method with the string constant.
+    // Defines a method with the `method_name`.
     // Stack before: []
     // Stack after: []
     // Usage: OP_METHOD <method_name>
     OP_METHOD("OP_METHOD"),
 
     // Invokes a method on an object.
-    // Stack before: [..., object, arguments...]
+    // Stack before: [..., object, argument1, argument2, ...]
     // Stack after: [..., result]
-    // Usage: OP_INVOKE <method_name>
+    // Usage: OP_INVOKE <method_name> <argument_count>
     OP_INVOKE("OP_INVOKE"),
 
-    // Gets a property from an object.
+
+    // Creates a new object of the class with `class_name`.
+    // Stack before: []
+    // Stack after: []
+    // Usage: OP_CLASS <class_name>
+    OP_CLASS("OP_CLASS"),
+
+    // Gets a field from an object.
     // Stack before: [object]
     // Stack after: [object.property]
-    // Usage: OP_GET_PROPERTY <property_name>
-    OP_GET_PROPERTY("OP_GET_PROPERTY"),
+    // Usage: OP_GET_FIELD <filed_name>
+    OP_GET_FIELD("OP_GET_FIELD"),
 
-    // Sets a property on an object.
+    // Sets a field on an object.
     // Stack before: [object, value]
     // Stack after: [value]
-    // Usage: OP_SET_PROPERTY <property_name>
-    OP_SET_PROPERTY("OP_SET_PROPERTY"),
+    // Usage: OP_SET_FIELD <filed_name>
+    OP_SET_FIELD("OP_SET_FIELD"),
+
+    // Gets the instance of current class.
+    // Stack before: []
+    // Stack after: [this]
+    // Usage: OP_THIS
+    OP_THIS("OP_THIS"),
+
+    // Gets the super instance of the class.
+    // Stack before: [object]
+    // Stack after: [object.super]
+    // Usage: OP_SUPER
+    OP_SUPER("OP_SUPER"),
+
+    // Cast the top value to a specific type.
+    // Stack before: [value]
+    // Stack after: [casted_value]
+    // Usage: OP_CAST <type_index>
+    OP_CAST("OP_CAST"),
+
+    // Check the object is a instance of a specific type.
+    // Stack before: [object]
+    // Stack after: [true/false]
+    // Usage: OP_INSTANCE_OF <type_index>
+    OP_INSTANCE_OF("OP_INSTANCE_OF"),
 
     // Calls a function with arguments.
     // Stack before: [argument1, argument2, ..., argumentN]

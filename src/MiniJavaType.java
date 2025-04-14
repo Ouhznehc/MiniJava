@@ -1,3 +1,5 @@
+import java.util.Objects;
+
 /**
  * This class represents a type in the MiniJava language.
  * Simply put, it is a wrapper around a string that represents the type.
@@ -5,41 +7,85 @@
  * It also provides methods to check if a type can be cast to another type.
  */
 public class MiniJavaType {
-    public String name;
+    public String primitiveType;
+    public String classType;
+    public Integer arrayDimension;
+    // This is a special field that is used to pass semantic checks.
+    // When we invoke a class method, due to polymorphism,
+    // we only know the return type at runtime.
+    // So we use this field to represent the return type of a class method to pass semantics checks.
+    public boolean isAnyType = false;
 
-    public MiniJavaType(String type) {
-        this.name = type;
+    public MiniJavaType(String primitiveType, String classType, Integer arrayDimension) {
+        this.primitiveType = primitiveType;
+        this.classType = classType;
+        this.arrayDimension = arrayDimension;
     }
+
+    public MiniJavaType(MiniJavaType type) {
+        this.primitiveType = type.primitiveType;
+        this.classType = type.classType;
+        this.arrayDimension = type.arrayDimension;
+        this.isAnyType = type.isAnyType;
+    }
+
+    public static MiniJavaType newAnyType() {
+        MiniJavaType type = new MiniJavaType(null, null, 0);
+        type.isAnyType = true;
+        return type;
+    }
+
+    public static MiniJavaType newPrimitiveType(String name) {
+        return new MiniJavaType(name, null, 0);
+    }
+    public static MiniJavaType newClassType(String name) {
+        return new MiniJavaType(null, name, 0);
+    }
+    public static MiniJavaType newPrimitiveArrayType(String name, Integer dimension) {
+        return new MiniJavaType(name, null, dimension);
+    }
+    public static MiniJavaType newClassArrayType(String name, Integer dimension) {
+        return new MiniJavaType(null, name, dimension);
+    }
+
+    public boolean isClass() {
+        return classType != null && !isArray();
+    }
+
+    public boolean isArray() {
+        return arrayDimension != 0;
+    }
+
 
     public boolean isBoolean() {
-        return name.equals("boolean");
+        return primitiveType != null && primitiveType.equals("boolean");
     }
     public boolean isInt() {
-        return name.equals("int");
+        return primitiveType != null && primitiveType.equals("int");
     }
     public boolean isChar() {
-        return name.equals("char");
-    }
-    public boolean isArray() {
-        return name.contains("[]");
+        return primitiveType != null && primitiveType.equals("char");
     }
     public boolean isString() {
-        return name.equals("string");
+        return primitiveType != null && primitiveType.equals("string");
     }
     public boolean isNull() {
-        return name.equals("null");
+        return primitiveType != null && primitiveType.equals("null");
     }
     public boolean isVoid() {
-        return name.equals("void");
+        return primitiveType != null && primitiveType.equals("void");
     }
 
     public boolean isEqual(MiniJavaType other) {
-        if (this.name.equals(other.name)) return true;
+        if (Objects.equals(this.primitiveType, other.primitiveType)
+            && Objects.equals(this.classType, other.classType)
+            && Objects.equals(this.arrayDimension, other.arrayDimension)) return true;
+        if (this.isAnyType || other.isAnyType) return true;
         return false;
     }
 
     public boolean isPrimitive() {
-        return isBoolean() || isInt() || isChar() || isString() || isNull();
+        return primitiveType != null && !isArray();
     }
 
     // `int` can be explicitly cast to `char`
@@ -61,6 +107,13 @@ public class MiniJavaType {
     }
 
     public String toString() {
-        return name;
+        if (isClass()) {
+            return classType;
+        } else if (isPrimitive()) {
+            return primitiveType;
+        } else {
+            if (primitiveType != null) return primitiveType + "[]".repeat(arrayDimension);
+            else return classType + "[]".repeat(arrayDimension);
+        } 
     }
 }

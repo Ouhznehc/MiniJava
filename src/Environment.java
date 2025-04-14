@@ -13,7 +13,8 @@ import java.util.Map;
  * The environment is used to manage the scopes and symbol tables during compilation.
 */
 public class Environment {
-    public String scope = null;
+    public String currentClass = null;
+    public String currentPool = null;
     // The label is used to create a unique jump target.
     public Integer label = 0;
     // The tempIndex is used to create a unique temporary variable name.
@@ -21,27 +22,29 @@ public class Environment {
     // The pools are used to store constant and variable pools for each scope.
     public final Map<String, Pools> pools;
     // The symbol table is a map of variable names to MiniJava objects.
-    // Each scope has its own symbol table.
     // Each symbol table is a list of maps, where each map represents a symbol table for a specific block(used for variable shadowing).
-    public final Map<String, ArrayList<Map<String, MiniJavaObject>>> symbolTable;
+    public final ArrayList<Map<String, MiniJavaObject>> symbolTable;
 
     public Environment() {
         pools = new HashMap<>();
-        symbolTable = new HashMap<>();
+        symbolTable = new ArrayList<>();
     }
 
     public void newSymbolTable() {
-        symbolTable.get(scope).add(new HashMap<>());
+        symbolTable.add(new HashMap<>());
     }
 
     public void removeSymbolTable() {
-        symbolTable.get(scope).removeLast();
+        symbolTable.removeLast();
     }
 
-    public void newScope(String scope) {
-        this.scope = scope;
-        pools.put(scope, new Pools());
-        symbolTable.put(scope, new ArrayList<>());
+    public void clearSymbolTable() {
+        symbolTable.clear();
+    }
+
+    public void newPools(String pool) {
+        this.currentPool = pool;
+        pools.put(pool, new Pools());
     }
 
     public Integer newLabel() {
@@ -50,14 +53,13 @@ public class Environment {
 
     public MiniJavaObject findVariable(String id) {
         // Try to find the variable in the current scope
-        var table = symbolTable.get(scope);
-        for (var i = table.size() - 1; i >= 0; i--) {
-            var symbol = table.get(i).get(id);
+        for (var i = symbolTable.size() - 1; i >= 0; i--) {
+            var symbol = symbolTable.get(i).get(id);
             if (symbol != null) {
                 return symbol;
             }
         }
-        throw new RuntimeException("Variable " + id + " not found");
+        return null;
     }
 
     // Register a new method
@@ -65,8 +67,8 @@ public class Environment {
     // 2. create a new pool for the method
     // 3. create a new symbol table for the method parameters
     // 4. add parameters to the symbol table
-    public void newMethod(String scope, ArrayList<MiniJavaObject> parameters) {
-        newScope(scope);
+    public void newMethod(String pool, ArrayList<MiniJavaObject> parameters) {
+        newPools(pool);
         newSymbolTable();
         for (var parameter : parameters) newVariable(parameter.type, parameter.name);
     }
@@ -79,11 +81,11 @@ public class Environment {
     // 4. add the variable to the symbol table
     public MiniJavaObject newVariable(MiniJavaType type, String name) {
         var object = new MiniJavaObject(type, name);
-        object.scope = scope;
-        object.index = pools.get(scope).variableIndex++;
+        object.pool = currentPool;
+        object.index = pools.get(currentPool).variableIndex++;
 
-        pools.get(scope).variablePool.add(object);
-        var table = symbolTable.get(scope).getLast();
+        pools.get(currentPool).variablePool.add(object);
+        var table = symbolTable.getLast();
         table.put(object.name, object);
         return object;
     }
@@ -94,23 +96,24 @@ public class Environment {
     // 3. add the constant to the constant pool
     public MiniJavaObject newConstant(String type, Object value) {
         var object = new MiniJavaObject(type, value);
-        object.scope = scope;
-        object.index = pools.get(scope).constantIndex++;
+        object.pool = currentPool;
+        object.index = pools.get(currentPool).constantIndex++;
 
-        pools.get(scope).constantPool.add(object);
+        pools.get(currentPool).constantPool.add(object);
         return object;
     }
 
     // Register a new temporary variable
     public MiniJavaObject newTemp() {
-        return newVariable(new MiniJavaType("int"), tempIndex++ + "_temp");
+        return newVariable(MiniJavaType.newPrimitiveType("int"), tempIndex++ + "_temp");
     }
 
     public void displayEnvironment(String filePath) {
         try (var writer = new PrintWriter(new FileWriter(filePath))) {
             for (var entry : pools.entrySet()) {
-                writer.println("================= Scope: " + entry.getKey() + " =================");
+                writer.println("================= Pools: " + entry.getKey() + " =================");
                 entry.getValue().displayPools(writer);
+                writer.print("\n\n\n");
             }
         } catch (IOException e) {
             e.printStackTrace();

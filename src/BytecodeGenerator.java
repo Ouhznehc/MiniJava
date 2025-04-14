@@ -29,18 +29,15 @@ public class BytecodeGenerator {
         bytecodes.add(new Bytecode(type));
     }
 
-    public void getVariable(MiniJavaObject variable) {
-        emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index);
-    }
-
-    // based on the type of variable, we can set the value
-    // if it is an array, we need to set the index
-    public void setVariable(MiniJavaObject variable) {
-        if (variable.type.isArray()) {
-            emitBytecode(BytecodeType.OP_SET_INDEX);
+    // ! This method must be used with `prepareLeftValue`
+    public void setVariable(MiniJavaObject indicator) {
+        if (indicator.type.isPrimitive()) {
+            emitBytecode(BytecodeType.OP_SET_LOCAL, indicator.index);
             return;
-        }
-        else emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index);
+        } else if (indicator.type.isClass()) {
+            emitBytecode(BytecodeType.OP_SET_FIELD, indicator.index);
+            return;
+        } else emitBytecode(BytecodeType.OP_SET_INDEX);
     }
 
 

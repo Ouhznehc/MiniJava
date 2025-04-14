@@ -1,18 +1,81 @@
-================= Scope: main@35a20c04 =================
+================= Pools: Child::foo(char) =================
 ------------- Constant Pool ------------
 Index Type       Value     
-0     int        2         
-1     int        0         
-2     int        3         
-3     int        0         
-4     int        1         
-5     int        1         
-6     int        2         
-7     int        2         
-8     int        3         
-9     int        1         
-10    null       null      
+0     int        10        
 
 ------------- Variable Pool ------------
 Index Name       Type       Value     
-0     a          int[][]    null      
+0     x          char       null      
+
+
+
+================= Pools: Parent::Parent(int) =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     string     x         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     x          int        null      
+
+
+
+================= Pools: Child::Child(int) =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     string     y         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     y          int        null      
+
+
+
+================= Pools: global::main() =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     int        1         
+1     string     Child::Child(int)
+2     int        100       
+3     string     Child::foo(int)
+4     int        0         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     child      Child      null      
+
+
+
+================= Pools: Parent =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     int        1         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     x          int        null      
+
+
+
+================= Pools: Parent::foo(int) =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     int        0         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     x          int        null      
+
+
+
+================= Pools: Child =================
+------------- Constant Pool ------------
+Index Type       Value     
+0     int        2         
+
+------------- Variable Pool ------------
+Index Name       Type       Value     
+0     y          int        null      
+
+
+

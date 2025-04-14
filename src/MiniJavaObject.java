@@ -9,18 +9,12 @@
 public class MiniJavaObject {
     public MiniJavaType type = null;
     public String name = null;
-    public String scope = null;
+    public String pool = null;
     public Integer index = null;
     // At bytecode generation time, this value is only used for constants,
     // for any other object, it is null
     // But it can be used to store the value of a variable at runtime.
     public Object value = null;
-
-    // Constructor for variable
-    public MiniJavaObject(String type, String name) {
-        this.type = new MiniJavaType(type);
-        this.name = name;
-    }
 
     // Constructor for variable
     public MiniJavaObject(MiniJavaType type, String name) {
@@ -30,8 +24,14 @@ public class MiniJavaObject {
 
     // Constructor for constant
     public MiniJavaObject(String type, Object value) {
-        this.type = new MiniJavaType(type);
+        this.type = MiniJavaType.newPrimitiveType(type);
         this.value = value;
+    }
+
+    // Constructor for leftValue
+    public MiniJavaObject(MiniJavaType type, Integer index) {
+        this.type = type;
+        this.index = index;
     }
 
 }

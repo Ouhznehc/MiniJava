@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.Stack;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+
 
 /**
  * This class is responsible for generating bytecode for the MiniJava compiler.
@@ -96,6 +98,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
             if (ctx.primary().identifier() != null) return ctx;
         }
         if (ctx.LBRACK() != null) return ctx;
+        if (ctx.bop != null && ctx.bop.getType() == MiniJavaParser.DOT) return ctx;
         throw new RuntimeException("Unknown left value expression: " + ctx.getText());
     }
     // This method must be called after `getLeftValueExp`,
@@ -106,14 +109,21 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         if (ctx.primary() != null) {
             var id = ctx.primary().identifier().getText();
             var variable = environment.findVariable(id);
-            return variable;
+            return new MiniJavaObject(new MiniJavaType("primitive", null, 0), variable.index);
         }
         // expression [ expression ]
         else if (ctx.LBRACK() != null) {
             visit(ctx.expression(0));
             visit(ctx.expression(1));
-            return null;
+            return new MiniJavaObject(new MiniJavaType(null, null, 1), 1);
         }
+        // expression DOT identifier
+        else if (ctx.bop != null) {
+            visit(ctx.expression(0));
+            var id = ctx.identifier().getText();
+            var field = environment.newConstant("string", id);
+            return new MiniJavaObject(new MiniJavaType(null, "field", 0), field.index);
+        } 
         else {
             throw new RuntimeException("Unknown left value expression: " + ctx.getText());
         }
@@ -121,7 +131,98 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
 
     @Override
     public Void visitCompilationUnit(MiniJavaParser.CompilationUnitContext ctx) {
-        return visitChildren(ctx);
+        var classDecls = ctx.classDeclaration();
+        var methodDecls = ctx.methodDeclaration();
+
+        for (var classDecl : classDecls) {
+            visitClassDeclaration(classDecl);
+        }
+        for (var methodDecl : methodDecls) {
+            environment.currentClass = "global"; 
+            visitMethodDeclaration(methodDecl);
+        }
+        return null;
+    }
+    
+    @Override
+    public Void visitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx) {
+        var className = ctx.identifier().getText();
+        environment.currentClass = className;
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_CLASS, className);
+        environment.clearSymbolTable();
+        visitClassBody(ctx.classBody());
+        return null;
+    }
+
+    @Override
+    public Void visitClassBody(MiniJavaParser.ClassBodyContext ctx) {
+        if (ctx.classBodyDeclaration() == null) return null;
+        environment.newSymbolTable();
+        environment.newPools(environment.currentClass);
+        var fieldDecls = new ArrayList<ParserRuleContext>();
+        var methodDecls = new ArrayList<ParserRuleContext>();
+        var constructors = new ArrayList<ParserRuleContext>();
+
+        for (var classBody : ctx.classBodyDeclaration()) {
+            if (classBody.fieldDeclaration() != null) 
+                fieldDecls.add(classBody.fieldDeclaration());
+            else if (classBody.methodDeclaration() != null) 
+                methodDecls.add(classBody.methodDeclaration());
+            else if (classBody.constructorDeclaration() != null) 
+                constructors.add(classBody.constructorDeclaration());
+        }
+
+        for (var fieldDecl : fieldDecls) {
+            visit(fieldDecl);
+        }
+        for (var constructor : constructors) {
+            visit(constructor);
+        }
+        for (var methodDecl : methodDecls) {
+            visit(methodDecl);
+        }
+
+        environment.removeSymbolTable();
+        return null;
+    }
+
+    @Override
+    public Void visitFieldDeclaration(MiniJavaParser.FieldDeclarationContext ctx) {
+        var defaultValue = semanticsVisitor.getType(ctx.typeType());
+        var declarator = ctx.variableDeclarator();
+        var identifier = declarator.identifier().getText();
+        // If the variable is not initialized, we need to set a default value
+        // to the variable in the symbol table
+        if (declarator.variableInitializer() == null) {
+            environment.newVariable(defaultValue, identifier);
+        } else {
+            visit(declarator.variableInitializer());
+            var type = semanticsVisitor.getType(declarator.variableInitializer());
+            var variable = environment.newVariable(type, identifier);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitConstructorDeclaration(MiniJavaParser.ConstructorDeclarationContext ctx) {
+        var constructorName = ctx.identifier().getText();
+        var paramTypes = new ArrayList<MiniJavaType>();
+        var params = new ArrayList<MiniJavaObject>();
+        if (ctx.formalParameters().formalParameterList() != null) {
+            for (var param : ctx.formalParameters().formalParameterList().formalParameter()) {
+                var type = semanticsVisitor.getType(param.typeType());
+                var id = param.identifier().getText();
+                paramTypes.add(new MiniJavaType(type));
+                params.add(new MiniJavaObject(type, id));
+            }
+        }
+        var methodSig = new MethodSignature(environment.currentClass, constructorName, paramTypes);
+        var methodMangle = methodSig.mangle();
+        environment.newMethod(methodMangle, params);
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_METHOD, methodMangle);
+        visit(ctx.constructorBody);
+        return null;
     }
 
     // When we visit a method declaration,
@@ -137,14 +238,13 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         var params = new ArrayList<MiniJavaObject>();
         if (ctx.formalParameters().formalParameterList() != null) {
             for (var param : ctx.formalParameters().formalParameterList().formalParameter()) {
-                var type = param.typeType().getText();
+                var type = semanticsVisitor.getType(param.typeType());
                 var id = param.identifier().getText();
                 paramTypes.add(new MiniJavaType(type));
                 params.add(new MiniJavaObject(type, id));
             }
         }
-        var returnType = ctx.VOID() != null ? new MiniJavaType("void") : new MiniJavaType(ctx.typeType().getText());
-        var methodSig = new MethodSignature(methodName, paramTypes, returnType);
+        var methodSig = new MethodSignature(environment.currentClass, methodName, paramTypes);
         var methodMangle = methodSig.mangle();
         environment.newMethod(methodMangle, params);
         bytecodeGenerator.emitBytecode(BytecodeType.OP_METHOD, methodMangle);
@@ -216,7 +316,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
     public Void visitLocalVariableDeclaration(MiniJavaParser.LocalVariableDeclarationContext ctx) {
         // typeType variableDeclarator
         if (ctx.VAR() == null) {
-            var defaultValue = new MiniJavaType(ctx.typeType().getText());
+            var defaultValue = semanticsVisitor.getType(ctx.typeType());
             var declarator = ctx.variableDeclarator();
             var identifier = declarator.identifier().getText();
             // If the variable is not initialized, we need to set a default value
@@ -227,7 +327,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
                 visit(declarator.variableInitializer());
                 var type = semanticsVisitor.getType(declarator.variableInitializer());
                 var variable = environment.newVariable(type, identifier);
-                bytecodeGenerator.setVariable(variable);
+                bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index);
             }
             return null;
         }
@@ -237,7 +337,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
             var type = semanticsVisitor.getType(ctx.expression());
             visit(ctx.expression());
             var variable = environment.newVariable(type, identifier);
-            bytecodeGenerator.setVariable(variable);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_LOCAL, variable.index);
             return null;
         }
     }
@@ -687,7 +787,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         return null;
     }
 
-    private Void visitArrayCreator(MiniJavaParser.CreatorContext ctx, int curDim) {
+    private Void arrayCreator(MiniJavaParser.CreatorContext ctx, int curDim) {
         var rest = ctx.arrayCreatorRest();
         var expList = rest.expression();
 
@@ -696,14 +796,14 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
 
         // If we are at a dimension without a size expression
         if (curDim >= providedDims) {
-            if (providedDims != totalDims) {
-                // Push null for not fully initialized arrays: int[3][]
+            if (providedDims != totalDims || ctx.createdName().identifier() != null) {
+                // Push null for not fully initialized arrays: int[3][] or class arrays: MyClass[3]
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_NIL); // stack: { null }
                 return null;
             } else {
                 // Handle default values for primitive types
                 var type = ctx.createdName().primitiveType().getText();
-                var primitive = new MiniJavaType(type);
+                var primitive = MiniJavaType.newPrimitiveType(type);
                 if (primitive.isInt()) {
                     var defaultInt = environment.newConstant("int", 0);
                     bytecodeGenerator.emitBytecode(BytecodeType.OP_CONSTANT, defaultInt.index); // stack: { 0 }
@@ -761,7 +861,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_LOCAL, arrayVar.index); // stack: { array }
         bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_LOCAL, indexVar.index); // stack: { array, index }
         // Recursively create subarrays
-        visitArrayCreator(ctx, curDim + 1); // stack: { array, index, subArray }
+        arrayCreator(ctx, curDim + 1); // stack: { array, index, subArray }
         // Assign the subarray to the current index
         bytecodeGenerator.emitBytecode(BytecodeType.OP_SET_INDEX); // stack: {}
         bytecodeGenerator.emitBytecode(BytecodeType.OP_POP); // stack: {}
@@ -780,13 +880,31 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visitCreator(MiniJavaParser.CreatorContext ctx) {
+    private Void visitArrayCreator(MiniJavaParser.CreatorContext ctx) {
         var rest = ctx.arrayCreatorRest();
         if (rest.arrayInitializer() != null) {
             return visit(rest.arrayInitializer());
         }
-        else return visitArrayCreator(ctx, 0);
+        else return arrayCreator(ctx, 0);
+    }
+
+    private Void visitClassCreator(MiniJavaParser.CreatorContext ctx) {
+        var paramTypes = new ArrayList<MiniJavaType>();
+        if (ctx.classCreatorRest().expressionList() != null)
+            for (var exp : ctx.classCreatorRest().expressionList().expression()){
+                visit(exp);
+                var arg = semanticsVisitor.getType(exp);
+                paramTypes.add(arg);
+            }
+        var methodName = environment.newConstant("string", semanticsVisitor.getMangledMethod(ctx)); 
+        bytecodeGenerator.emitBytecode(BytecodeType.OP_CALL, methodName.index, paramTypes.size());
+        return null;
+    }
+
+    @Override
+    public Void visitCreator(MiniJavaParser.CreatorContext ctx) {
+        if (ctx.arrayCreatorRest() != null) return visitArrayCreator(ctx);
+        else return visitClassCreator(ctx);
     }
 
     // When meet a method call:
@@ -810,14 +928,48 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         return null;
     }
 
+    private Void visitClassMethodCall(MiniJavaParser.MethodCallContext ctx, String className, boolean isDotMethodCall) {
+        var argumentTypes = new ArrayList<MiniJavaType>();
+        if (ctx.arguments().expressionList() != null) {
+            for (var exp : ctx.arguments().expressionList().expression()) {
+                visit(exp);
+                var arg = semanticsVisitor.getType(exp);
+                argumentTypes.add(arg);
+            }
+        }
+        if (isDotMethodCall) {
+            var methodSig = new MethodSignature(className, ctx.identifier().getText(), argumentTypes);
+            var methodName = environment.newConstant("string", methodSig.mangle());
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_INVOKE, methodName.index, argumentTypes.size());
+        } else {
+            var methodName = environment.newConstant("string", semanticsVisitor.getMangledMethod(ctx));
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_CALL, methodName.index, argumentTypes.size());
+        }
+        return null;
+    }
+
+    private Void visitDotExp(MiniJavaParser.ExpressionContext ctx) {
+        var expType = semanticsVisitor.getType(ctx.expression(0));
+        visit(ctx.expression(0));
+        if (ctx.identifier() != null) {
+            var field = environment.newConstant("string", ctx.identifier().getText());
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_FIELD, field.index);
+        } else {
+            visitClassMethodCall(ctx.methodCall(), expType.classType, true);
+        }
+        return null;
+    }
+
     @Override
     public Void visitExpression(MiniJavaParser.ExpressionContext ctx) {
         if (ctx.LBRACK() != null) {
            return visitArrayIndex(ctx);
         } else if (ctx.creator() != null) { 
             return visit(ctx.creator());
+        } else if (ctx.bop != null && ctx.bop.getType() == MiniJavaParser.DOT) {
+            return visitDotExp(ctx);
         } else if (ctx.methodCall() != null) {
-            return visit(ctx.methodCall());
+            return visitClassMethodCall(ctx.methodCall(), environment.currentClass,false);
         } else if (isConditionExp(ctx)) {
            return visitConditionalExp(ctx);
         } else if (isQuestionExp(ctx)) {
@@ -831,9 +983,9 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
         } else if (ctx.prefix != null) {
             return visitPrefixExp(ctx);
         } else if (ctx.typeType() != null) {
-            // About Type casting, we do nothing here,
-            // because we handle it in the semantics visitor.
             visit(ctx.expression(0));
+            var toType = environment.newConstant("string", ctx.typeType().getText());
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_CAST, toType.index);
             return null;
         } else {
             throw new RuntimeException("Unknown expression: " + ctx.getText());
@@ -842,10 +994,22 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
 
     @Override
     public Void visitPrimary(MiniJavaParser.PrimaryContext ctx) {
-        if (ctx.getChildCount() == 3) {
-            return visitExpression(ctx.expression());
+        if (ctx.expression() != null) return visit(ctx.expression());
+        else if (ctx.THIS() != null) {
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_THIS);
+            return null;
         }
-        return visitChildren(ctx);
+        else if (ctx.SUPER() != null) {
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_SUPER);
+            return null;
+        }
+        else if (ctx.identifier() != null) {
+            return visit(ctx.identifier());
+        }
+        else if (ctx.literal() != null) {
+            return visit(ctx.literal());
+        }
+        else throw new RuntimeException("Unknown primary: " + ctx.getText());
     }
 
 
@@ -888,7 +1052,15 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
     public Void visitIdentifier(MiniJavaParser.IdentifierContext ctx) {
         String identifier = ctx.IDENTIFIER().getText();
         var variable = environment.findVariable(identifier);
-        bytecodeGenerator.getVariable(variable);
+        if (variable != null) {
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_LOCAL, variable.index);
+        } else {
+            // If the variable is not found in the local scope, 
+            // it must be a field variable.
+            var field = environment.newConstant("string", identifier);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_THIS);
+            bytecodeGenerator.emitBytecode(BytecodeType.OP_GET_FIELD, field.index);
+        }
         return null;
     }
 }
