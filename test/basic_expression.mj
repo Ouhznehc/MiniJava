@@ -20,6 +20,6 @@ class Child extends Parent {
 
 int main() {
     var child = new Child(1);
-    child.foo("asda");
+    child.foo(20);
     return 0;
 }

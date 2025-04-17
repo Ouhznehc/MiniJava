@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -20,13 +21,15 @@ public class Environment {
     // The tempIndex is used to create a unique temporary variable name.
     public Integer tempIndex = 0;
     // The pools are used to store constant and variable pools for each scope.
-    public final Map<String, Pools> pools;
+    // ! Note we use `LinkedHashMap` here to maintain the order of insertion.
+    // ! So that we can display the pools in the same order as the program.
+    public final LinkedHashMap<String, Pools> pools;
     // The symbol table is a map of variable names to MiniJava objects.
     // Each symbol table is a list of maps, where each map represents a symbol table for a specific block(used for variable shadowing).
     public final ArrayList<Map<String, MiniJavaObject>> symbolTable;
 
     public Environment() {
-        pools = new HashMap<>();
+        pools = new LinkedHashMap<>();
         symbolTable = new ArrayList<>();
     }
 

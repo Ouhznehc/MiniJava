@@ -1,4 +1,4 @@
-+++++++++ Parent +++++++++
++++++++++++++++++++++++++++ Parent +++++++++++++++++++++++++++
 OP_CONSTANT 0
 OP_SET_LOCAL 0
 ========= Parent::Parent(int) =========
@@ -9,7 +9,7 @@ OP_POP
 ========= Parent::foo(int) =========
 OP_CONSTANT 0
 OP_RETURN
-+++++++++ Child +++++++++
++++++++++++++++++++++++++++ Child +++++++++++++++++++++++++++
 OP_CONSTANT 0
 OP_SET_LOCAL 0
 ========= Child::Child(int) =========

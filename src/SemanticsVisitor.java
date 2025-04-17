@@ -189,11 +189,37 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         return exactMethod;
     }
 
-    private MethodSignature countOverloadedMethod(MethodSignature callSig, String className) {
+    private MethodSignature findOverloadedMethod(MethodSignature callSig, boolean isDotMethodCall) {
+        var className = callSig.className;
+
         int minConversion = Integer.MAX_VALUE;
         MethodSignature bestMethod = null;
-        int bestCount = 0;  // Count of candidates with minimal conversion count
+        int bestCount = 0; 
 
+        while (className != null) {
+            var methodSignatures = classMethodMap.get(className);
+            if (methodSignatures != null) {
+                for (var methodSig : methodSignatures) {
+                    int conversionCount = getImplicitConversionCount(methodSig, callSig);
+                    if (conversionCount == Integer.MAX_VALUE) continue;
+                    if (conversionCount < minConversion) {
+                        minConversion = conversionCount;
+                        bestMethod = methodSig;
+                        bestCount = 1;
+                    } else if (conversionCount == minConversion) {
+                        bestCount++;
+                    }
+                }
+            }
+            className = parentClassMap.get(className);
+        }
+
+        if (isDotMethodCall) {
+            if (bestCount == 0) throw new RuntimeException("Method " + callSig.mangle() + " not found.");
+            if (bestCount > 1) throw new RuntimeException("Ambiguous method call: " + callSig.mangle());
+            return bestMethod;
+        }
+        // Find in the global class
         var methodSignatures = classMethodMap.get(className);
         if (methodSignatures != null) {
             for (var methodSig : methodSignatures) {
@@ -208,24 +234,8 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
                 }
             }
         }
-
+        if (bestCount == 0) throw new RuntimeException("Method " + callSig.mangle() + " not found.");
         if (bestCount > 1) throw new RuntimeException("Ambiguous method call: " + callSig.mangle());
-        return bestMethod;
-    }
-
-    private MethodSignature findOverloadedMethod(MethodSignature callSig, boolean isDotMethodCall) {
-        var className = callSig.className;
-        while (className != null) {
-            var bestMethod = countOverloadedMethod(callSig, className);
-            if (bestMethod != null) {
-                return bestMethod;
-            }
-            className = parentClassMap.get(className);
-        }
-        if (isDotMethodCall) {
-            throw new RuntimeException("Method " + callSig.mangle() + " not found.");
-        }
-        var bestMethod = countOverloadedMethod(callSig, "global");
         return bestMethod;
     }
 
@@ -792,7 +802,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
             for (var arg : ctx.classCreatorRest().expressionList().expression())
                 paramTypes.add(visit(arg));
         var methodSig = new MethodSignature(className, className, paramTypes);
-        var constructor = countOverloadedMethod(methodSig, className);
+        var constructor = findOverloadedMethod(methodSig, false);
         if (constructor == null) {
             throw new RuntimeException("[ERROR] Constructor for" + ctx.getText() + " not found");
         }
