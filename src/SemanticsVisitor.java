@@ -19,7 +19,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
     // `symbolTable` is a stack of maps, where each map represents a scope/block.
-    // When enter a new method, we clear the WHOLE symbol table.
+    // When enter a new method/class, we clear the WHOLE symbol table.
     private final List<Map<String, MiniJavaType>> symbolTable;
     // `typeMap` is used to store the type of each node in the parse tree.
     // It is used to check the type of a variable, a method call, an expression, etc.
@@ -33,6 +33,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
     private final Map<String, Map<String, MiniJavaType>> classFieldMap;
     // `parentClassMap` is used to store the parent class for each class in the program.
     private final Map<String, String> parentClassMap;
+    // currentClassName is used to store the name of the current class being visited.
     private String currentClassName = null;
 
     public SemanticsVisitor() {
@@ -48,6 +49,8 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
     // This method is used when bytecode generator visit a method call
     // It will return the mangled method signature for the method call
     // The `methodMap` is maintained by SematicsVisitor
+    // Note that the `methodMap` is only used for static method calls(a.k.a. global method calls)
+    // For instance method calls, the real method is resolved at runtime.
     public String getMangledMethod(ParserRuleContext ctx) {
         return methodMap.get(ctx);
     }
@@ -77,6 +80,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         symbolTable.clear();
     }
 
+    // Put a method memeber signature into the classMethodMap
     private void addMethodSignature(MethodSignature methodSig) {
         var className = methodSig.className;
         if (!classMethodMap.containsKey(className)) {
@@ -99,7 +103,8 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
                 return scope.get(name);
             }
         }
-        // Then we treat it as a class field
+        // Then we treat it as a class field,
+        // Note that even in the global scope, we treat it as a class which does not have any fields.
         var currentClass = currentClassName;
         while (currentClass != null) {
             var classFields = classFieldMap.get(currentClass);
@@ -142,6 +147,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
                 || type == MiniJavaParser.XOR_ASSIGN;
     }
 
+    // This method is used to whether two method signatures are exactly the same.
     private boolean compareExactMethod(MethodSignature candidate, MethodSignature callSig) {
         if (!candidate.methodName.equals(callSig.methodName)) return false;
         if (candidate.parameterTypes.size() != callSig.parameterTypes.size()) return false;
@@ -154,6 +160,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         return true;
     }
 
+    // This method is used to count the number of exact methods within a class.
     private MethodSignature countExactMethod(MethodSignature callSig, String className) {
         int exactMethodCount = 0;
         MethodSignature exactMethod = null;
@@ -171,6 +178,9 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         return exactMethod;
     }
 
+    // This method is used to find the exact method signature for a method call
+    // We check if the method is in the current class or its super class.
+    // If the method call is not a dot method call(instance.methodcall), we check if the method is in the global class.
     private MethodSignature findExactMethod(MethodSignature callSig, boolean isDotMethodCall) {
         var className = callSig.className;
         // First we check if the method is in the current class or its super class.
@@ -189,6 +199,12 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         return exactMethod;
     }
 
+
+    // This method is used to find the overloaded method signature for a method call.
+    // We check if the method is in the current class or its super class.
+    // Note that we have to make sure there is only one method with the minimal implicit conversion count,
+    // across all the classes in the inheritance tree. Otherwise, we will throw an error.
+    // Similarly, if the method call is not a dot method call(instance.methodcall), we check if the method is in the global class.
     private MethodSignature findOverloadedMethod(MethodSignature callSig, boolean isDotMethodCall) {
         var className = callSig.className;
 
@@ -253,6 +269,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         else return findOverloadedMethod(callSig, isDotMethodCall);
     }
 
+    // This method is used to count the number of implicit conversions needed to convert.
     private Integer getImplicitConversionCount(MethodSignature candidate, MethodSignature callSig) {
         if (!candidate.methodName.equals(callSig.methodName)) return Integer.MAX_VALUE;
         if (candidate.parameterTypes.size() != callSig.parameterTypes.size()) return Integer.MAX_VALUE;
@@ -276,7 +293,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         return count;
     }
 
-
+    // pre-visit method declaration, add the method signature to the classMethodMap
     private void preVisitMethodDeclaration(MiniJavaParser.MethodDeclarationContext ctx, String className) {
         var methodName = ctx.identifier().getText();
         var paramTypes = new ArrayList<MiniJavaType>();
@@ -291,6 +308,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         addMethodSignature(methodSig);
     }
 
+    // pre-visit constructor declaration, add the method signature to the classMethodMap
     private void preVisitConstructorDeclaration(MiniJavaParser.ConstructorDeclarationContext ctx, String className) {
         var methodName = ctx.identifier().getText();
         var paramTypes = new ArrayList<MiniJavaType>();
@@ -305,6 +323,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         addMethodSignature(methodSig);
     }
 
+    // pre-visit field declaration, add the field type to the classFieldMap
     private void preVisitFieldDeclaration(MiniJavaParser.FieldDeclarationContext ctx, String className) {
         var fieldType = visit(ctx.typeType());
         var fieldName = ctx.variableDeclarator().identifier().getText();
@@ -320,6 +339,7 @@ public class SemanticsVisitor extends MiniJavaParserBaseVisitor<MiniJavaType> {
         if (ctx.fieldDeclaration() != null) preVisitFieldDeclaration(ctx.fieldDeclaration(), className);
     }
     
+    // pre-visit class declaration, add the class name and parent class name to the parentClassMap
     private void preVisitClassDeclaration(MiniJavaParser.ClassDeclarationContext ctx) {
         var className = ctx.identifier().getText();
         String parentClassName = null;

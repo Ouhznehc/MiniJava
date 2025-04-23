@@ -226,7 +226,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
     }
 
     // When we visit a method declaration,
-    // 1. Extract the method name, parameter types, and return type.
+    // 1. Extract the class name, method name, parameter types, and return type.
     // 2. Create a new method signature and mangle it for unique identification.
     // 3. Initialize a new method environment with the method's parameters.
     // 4. Emit bytecode to define the method.
@@ -801,7 +801,7 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
                 bytecodeGenerator.emitBytecode(BytecodeType.OP_NIL); // stack: { null }
                 return null;
             } else {
-                // Handle default values for primitive types
+                // Handle default values for fully initialized primitive types
                 var type = ctx.createdName().primitiveType().getText();
                 var primitive = MiniJavaType.newPrimitiveType(type);
                 if (primitive.isInt()) {
@@ -913,21 +913,6 @@ public class BytecodeVisitor extends MiniJavaParserBaseVisitor<Void> {
     // Note that about method overloading, we handle it in the semantics visitor.
     // So we just get the right mangled method name from the semantics visitor,
     // and emit the bytecode for the method call.
-    @Override
-    public Void visitMethodCall(MiniJavaParser.MethodCallContext ctx) {
-        var argumentTypes = new ArrayList<MiniJavaType>();
-        if (ctx.arguments().expressionList() != null) {
-            for (var exp : ctx.arguments().expressionList().expression()) {
-                visit(exp);
-                var arg = semanticsVisitor.getType(exp);
-                argumentTypes.add(arg);
-            }
-        }
-        var methodName = environment.newConstant("string", semanticsVisitor.getMangledMethod(ctx));
-        bytecodeGenerator.emitBytecode(BytecodeType.OP_CALL, methodName.index, argumentTypes.size());
-        return null;
-    }
-
     private Void visitClassMethodCall(MiniJavaParser.MethodCallContext ctx, String className, boolean isDotMethodCall) {
         var argumentTypes = new ArrayList<MiniJavaType>();
         if (ctx.arguments().expressionList() != null) {

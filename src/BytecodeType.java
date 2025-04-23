@@ -232,8 +232,8 @@ public enum BytecodeType {
     OP_THIS("OP_THIS"),
 
     // Gets the super instance of the class.
-    // Stack before: [object]
-    // Stack after: [object.super]
+    // Stack before: []
+    // Stack after: [super]
     // Usage: OP_SUPER
     OP_SUPER("OP_SUPER"),
 
@@ -257,7 +257,7 @@ public enum BytecodeType {
 
     // Returns from a function.
     // Stack before: []
-    // Stack after: [return_value]
+    // Stack after: []
     // Usage: OP_RETURN
     OP_RETURN("OP_RETURN"),
 
